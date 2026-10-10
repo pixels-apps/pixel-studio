@@ -1,7 +1,7 @@
 # Architecture
 
 ```
-browser ──HTTP──> timebox-evo (Pyronaut, :8080) ──TCP──> timebox-bridge (:7777) ──RFCOMM ch. 1──> Timebox Evo
+browser ──HTTP──> pixel-studio (Pyronaut, :8080) ──TCP──> timebox-bridge (:7777) ──RFCOMM ch. 1──> Timebox Evo
 ```
 
 ## Why a relay

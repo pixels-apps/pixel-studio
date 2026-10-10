@@ -1,6 +1,6 @@
 """Stockage sur disque : galerie d'images (un JSON par image) et dernière image envoyée.
 
-Arborescence (dossier configurable `timebox.storage.dir`, défaut `~/.timebox-evo`) :
+Arborescence (dossier configurable `timebox.storage.dir`, défaut `~/.pixel-studio`) :
 
     gallery/<id>.json      {"id", "name", "pixels": [256 × "rrggbb"], "created", "updated"}
     last-image.json        {"pixels": [...]}
@@ -35,7 +35,7 @@ class ImageNotFound(Exception):
 @ConfigurationProperties("timebox.storage")
 @dataclass
 class StorageConfig:
-    dir: str = "~/.timebox-evo"
+    dir: str = "~/.pixel-studio"
 
 
 def _now() -> str:

@@ -1,4 +1,4 @@
-// Accès à l'API REST de timebox-evo.
+// Accès à l'API REST de pixel-studio.
 
 export class ApiError extends Error {
   constructor(status, message) {

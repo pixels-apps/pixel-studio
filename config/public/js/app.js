@@ -72,7 +72,7 @@ function run(action, { busy = [] } = {}) {
       ui.connection.title = unavailable ? e.message : "";
       toast(unavailable
         ? (e.status === 0
-          ? "Serveur injoignable : l'application timebox-evo est-elle lancée ?"
+          ? "Serveur injoignable : l'application pixel-studio est-elle lancée ?"
           : "Timebox injoignable : vérifiez que timebox-bridge est lancé et l'appareil allumé.")
         : e.message, "error");
     } finally {
@@ -145,13 +145,13 @@ const BASE_PALETTE = [
   "00e0c0", "00a0ff", "0040ff", "8040ff", "ff40c0", "ff8080", "804020", "ffd8a0",
 ];
 const RECENT_MAX = 16;
-const DRAFT_KEY = "timebox-evo.draft";
+const DRAFT_KEY = "pixel-studio.draft";
 const storage = {
   get(key) { try { return JSON.parse(localStorage.getItem(key)); } catch { return null; } },
   set(key, value) { try { localStorage.setItem(key, JSON.stringify(value)); } catch { /* indisponible */ } },
 };
 
-let recent = storage.get("timebox-evo.recent") ?? [];
+let recent = storage.get("pixel-studio.recent") ?? [];
 let sentPixels = null; // dernière image envoyée (pour l'indicateur « modifié »)
 
 function swatch(hex, onPick) {
@@ -179,7 +179,7 @@ function pickColor(hex) {
 function rememberColor(hex) {
   if (recent[0] === hex) return;
   recent = [hex, ...recent.filter((c) => c !== hex)].slice(0, RECENT_MAX);
-  storage.set("timebox-evo.recent", recent);
+  storage.set("pixel-studio.recent", recent);
   renderPalettes();
 }
 
@@ -266,7 +266,7 @@ const docUi = {
   saveCopy: $("save-copy"),
   newImage: $("new-image"),
 };
-const DOC_KEY = "timebox-evo.doc";
+const DOC_KEY = "pixel-studio.doc";
 let doc = storage.get(DOC_KEY) ?? { id: null, name: "" }; // image de la galerie en cours d'édition
 let galleryItems = [];
 

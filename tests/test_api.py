@@ -11,7 +11,7 @@ from pyronaut.test import MicronautTest, micronaut_test_fixture
 
 
 def start(request, storage_dir):
-    """Contexte Micronaut de test, avec un dossier de stockage dédié (jamais ~/.timebox-evo)."""
+    """Contexte Micronaut de test, avec un dossier de stockage dédié (jamais ~/.pixel-studio)."""
     return micronaut_test_fixture(request, MicronautTest(
         environments=["test"], transactional=False, properties={"timebox.storage.dir": str(storage_dir)}))
 

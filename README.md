@@ -1,13 +1,13 @@
-# timebox-evo
+# pixel-studio
 
 Drive a **Divoom Timebox Evo** (16×16 LED speaker) from a web browser: pixel editor, image import,
 gallery and device controls, served by a [Pyronaut](https://pyronaut.io) application
 (Python on GraalPy + Micronaut).
 
-![timebox-evo web UI: pixel editor with an imported sunset, LED preview and device controls](docs/img/screenshot.png)
+![pixel-studio web UI: pixel editor with an imported sunset, LED preview and device controls](docs/img/screenshot.png)
 
 ```
-browser ──HTTP──> timebox-evo (Pyronaut, :8080) ──TCP──> timebox-bridge (:7777) ──Bluetooth RFCOMM──> Timebox Evo
+browser ──HTTP──> pixel-studio (Pyronaut, :8080) ──TCP──> timebox-bridge (:7777) ──Bluetooth RFCOMM──> Timebox Evo
 ```
 
 The Timebox Evo is driven over **classic Bluetooth (SPP, RFCOMM channel 1)**. Bluetooth is handled
@@ -111,7 +111,7 @@ curl -X POST -H "Content-Type: image/png" --data-binary @heart.png http://localh
 | `timebox.bridge.host` / `port` | `127.0.0.1` / `7777` | relay address |
 | `timebox.bridge.connect-timeout-ms` | `2000` | relay connection timeout |
 | `timebox.reply-timeout-ms` | `2000` | wait for the device reply |
-| `timebox.storage.dir` | `~/.timebox-evo` | gallery (`gallery/*.json`) and last image |
+| `timebox.storage.dir` | `~/.pixel-studio` | gallery (`gallery/*.json`) and last image |
 
 ## Project layout
 
