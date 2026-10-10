@@ -4,6 +4,8 @@ Drive a **Divoom Timebox Evo** (16×16 LED speaker) from a web browser: pixel ed
 gallery and device controls, served by a [Pyronaut](https://pyronaut.io) application
 (Python on GraalPy + Micronaut).
 
+![timebox-evo web UI: pixel editor with an imported sunset, LED preview and device controls](docs/img/screenshot.png)
+
 ```
 browser ──HTTP──> timebox-evo (Pyronaut, :8080) ──TCP──> timebox-bridge (:7777) ──Bluetooth RFCOMM──> Timebox Evo
 ```
