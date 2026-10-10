@@ -1,0 +1,216 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Timebox Evo</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 4 4'%3E%3Crect width='4' height='4' fill='%23111'/%3E%3Ccircle cx='1' cy='1' r='.4' fill='%23f43'/%3E%3Ccircle cx='3' cy='1' r='.4' fill='%23fc3'/%3E%3Ccircle cx='1' cy='3' r='.4' fill='%233c6'/%3E%3Ccircle cx='3' cy='3' r='.4' fill='%2339f'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="style.css">
+  <script type="module" src="js/app.js"></script>
+</head>
+<body>
+  <header class="topbar">
+    <h1 class="brand"><span class="brand-dot" aria-hidden="true"></span>Timebox Evo</h1>
+    <div class="connection" id="connection" role="status" aria-live="polite">
+      <span class="connection-dot" aria-hidden="true"></span>
+      <span id="connection-label">Connexion…</span>
+    </div>
+  </header>
+
+  <main class="layout">
+    <section class="workspace" aria-labelledby="editor-title">
+      <div class="card editor-card" id="editor-card">
+        <div class="drop-overlay" aria-hidden="true"><span>Déposez l'image pour l'importer</span></div>
+        <div class="card-head">
+          <h2 id="editor-title" class="visually-hidden">Éditeur</h2>
+          <input class="doc-name" id="doc-name" type="text" maxlength="60" placeholder="Sans titre"
+                 aria-label="Nom de l'image" autocomplete="off" spellcheck="false">
+          <div class="badges">
+            <span class="badge neutral" id="saved-state" hidden></span>
+            <span class="badge" id="dirty" hidden>modifié depuis l'envoi</span>
+          </div>
+        </div>
+
+        <div class="toolbar" role="toolbar" aria-label="Outils de dessin">
+          <div class="tool-group">
+            <button type="button" class="tool" data-tool="pencil" title="Crayon (B)" aria-label="Crayon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20l4-1 11-11-3-3L5 16z M14 6l3 3"/></svg></button>
+            <button type="button" class="tool" data-tool="eraser" title="Gomme : éteint les LED (E)" aria-label="Gomme"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 20h12 M4.5 15.5l9-9 6 6-7.5 7.5H9z M9 11l5 5"/></svg></button>
+            <button type="button" class="tool" data-tool="fill" title="Pot de peinture (G)" aria-label="Pot de peinture"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12l7-7 8 8-7 7z M4 12h15 M20 16s1.5 2 1.5 3a1.5 1.5 0 0 1-3 0c0-1 1.5-3 1.5-3"/></svg></button>
+            <button type="button" class="tool" data-tool="pick" title="Pipette (I, ou Alt + clic)" aria-label="Pipette"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M13 7l4 4 M18.5 3.5a2.1 2.1 0 0 1 3 3L17 11l-4-4z M14 8l-9 9v3h3l9-9"/></svg></button>
+          </div>
+          <div class="tool-group">
+            <button type="button" class="tool" id="import" title="Importer une image (ou glisser-déposer, ou ⌘V)" aria-label="Importer une image"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15V4 M7.5 8.5L12 4l4.5 4.5 M5 14v4a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-4"/></svg></button>
+          </div>
+          <div class="tool-group">
+            <button type="button" class="tool" id="undo" title="Annuler (⌘Z / Ctrl+Z)" aria-label="Annuler"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 14L4 9l5-5 M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/></svg></button>
+            <button type="button" class="tool" id="redo" title="Rétablir (⇧⌘Z / Ctrl+Y)" aria-label="Rétablir"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 14l5-5-5-5 M20 9H9.5a5.5 5.5 0 0 0 0 11H13"/></svg></button>
+            <button type="button" class="tool" id="clear" title="Tout effacer" aria-label="Tout effacer"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16 M10 11v6 M14 11v6 M6 7l1 13h10l1-13 M9 7V4h6v3"/></svg></button>
+          </div>
+        </div>
+
+        <div class="editor-body">
+          <canvas id="editor" class="pixel-canvas" width="512" height="512"
+                  aria-label="Grille de dessin 16 par 16 : flèches pour se déplacer, Espace pour appliquer l'outil"
+                  aria-describedby="cursor-status"></canvas>
+          <p class="visually-hidden" id="cursor-status" aria-live="polite"></p>
+
+          <div class="editor-side">
+            <div class="paint">
+              <input type="color" id="paint-color" value="#ffffff" aria-label="Couleur de dessin">
+              <div>
+                <div class="muted small-label">Couleur</div>
+                <code id="paint-hex">#ffffff</code>
+              </div>
+            </div>
+            <div>
+              <div class="muted small-label">Palette</div>
+              <div class="palette" id="palette" role="group" aria-label="Palette"></div>
+            </div>
+            <div>
+              <div class="muted small-label">Récentes</div>
+              <div class="palette" id="recent" role="group" aria-label="Couleurs récentes"></div>
+            </div>
+            <figure class="preview">
+              <div class="screen-frame small">
+                <canvas id="preview" class="led-screen" width="160" height="160"
+                        role="img" aria-label="Aperçu sur l'écran LED"></canvas>
+              </div>
+              <figcaption class="muted small-label">Aperçu LED</figcaption>
+            </figure>
+          </div>
+        </div>
+
+        <div class="send-row">
+          <button class="primary" type="button" id="send">Envoyer au Timebox</button>
+          <button class="secondary" type="button" id="save">Enregistrer</button>
+          <button class="secondary" type="button" id="save-copy" hidden>Enregistrer une copie</button>
+          <label class="check"><input type="checkbox" id="auto-send"> Envoi automatique</label>
+        </div>
+        <p class="muted small">Astuce : glissez-déposez une image sur l'éditeur, ou collez-la (⌘V / Ctrl+V), pour l'importer.</p>
+      </div>
+
+      <div class="card">
+        <div class="card-head">
+          <h2 id="gallery-title">Galerie <span class="muted" id="gallery-count"></span></h2>
+          <button class="secondary small-button" type="button" id="new-image">Nouvelle image</button>
+        </div>
+        <ul class="gallery" id="gallery" aria-labelledby="gallery-title"></ul>
+        <p class="muted small" id="gallery-empty" hidden>Aucune image enregistrée : dessinez ou importez une image, puis « Enregistrer ».</p>
+      </div>
+    </section>
+
+    <template id="tile-template">
+      <li class="tile">
+        <button type="button" class="thumb" title="Ouvrir dans l'éditeur"><canvas width="16" height="16"></canvas></button>
+        <div class="tile-meta">
+          <span class="tile-name"></span>
+          <input class="tile-rename" type="text" maxlength="60" aria-label="Nouveau nom" hidden>
+          <span class="tile-date muted"></span>
+        </div>
+        <div class="tile-actions">
+          <button type="button" class="tile-button" data-action="send" title="Afficher sur le Timebox" aria-label="Afficher sur le Timebox"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h12 M13 6l6 6-6 6"/></svg></button>
+          <button type="button" class="tile-button" data-action="rename" title="Renommer" aria-label="Renommer"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20l4-1 11-11-3-3L5 16z"/></svg></button>
+          <button type="button" class="tile-button danger" data-action="delete" title="Supprimer" aria-label="Supprimer"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16 M10 11v6 M14 11v6 M6 7l1 13h10l1-13 M9 7V4h6v3"/></svg></button>
+        </div>
+      </li>
+    </template>
+
+    <aside class="panel" aria-label="Contrôle de l'appareil">
+      <div class="card">
+        <div class="card-head">
+          <h2>État</h2>
+          <button class="icon-button" id="refresh" type="button" title="Relire l'état de l'appareil" aria-label="Relire l'état">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 12a8 8 0 1 1-2.34-5.66M20 4v5h-5"/></svg>
+          </button>
+        </div>
+        <dl class="state">
+          <div><dt>Écran</dt><dd id="state-view">—</dd></div>
+          <div><dt>Couleur</dt><dd><span class="swatch" id="state-swatch"></span><span id="state-color">—</span></dd></div>
+          <div><dt>Luminosité</dt><dd id="state-brightness">—</dd></div>
+        </dl>
+        <p class="muted small" id="state-updated"></p>
+      </div>
+
+      <div class="card">
+        <h2>Écran affiché</h2>
+        <div class="segmented" role="group" aria-label="Écran affiché">
+          <button type="button" data-view="clock">Horloge</button>
+          <button type="button" data-view="light">Lumière</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2><label for="brightness">Luminosité</label></h2>
+        <div class="slider-row">
+          <input type="range" id="brightness" min="0" max="100" step="1" value="100">
+          <output id="brightness-value" for="brightness">100</output>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2><label for="color">Couleur unie</label></h2>
+        <div class="color-row">
+          <input type="color" id="color" value="#ff8800">
+          <div class="presets" id="presets" role="group" aria-label="Couleurs rapides"></div>
+        </div>
+        <button class="primary" type="button" id="apply-color">Afficher cette couleur</button>
+      </div>
+    </aside>
+  </main>
+
+  <footer class="footer">
+    <span>timebox-evo · Pyronaut (GraalPy + Micronaut) · relais timebox-bridge</span>
+    <a href="/swagger-ui/index.html" target="_blank" rel="noopener">Documentation de l'API</a>
+  </footer>
+
+  <input type="file" id="import-file" accept="image/*" hidden>
+
+  <dialog class="dialog" id="import-dialog" aria-labelledby="import-title">
+    <form method="dialog">
+      <div class="card-head">
+        <h2 id="import-title">Importer une image</h2>
+        <button class="icon-button" value="cancel" aria-label="Fermer" title="Fermer">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12 M18 6L6 18"/></svg>
+        </button>
+      </div>
+
+      <div class="import-body">
+        <figure>
+          <div class="source-frame"><img id="import-source" alt="Image d'origine"></div>
+          <figcaption class="muted small-label" id="import-name"></figcaption>
+        </figure>
+        <figure>
+          <div class="screen-frame small">
+            <canvas id="import-preview" class="led-screen" width="200" height="200"
+                    role="img" aria-label="Résultat 16 par 16"></canvas>
+          </div>
+          <figcaption class="muted small-label">Résultat 16×16</figcaption>
+        </figure>
+      </div>
+
+      <fieldset class="option">
+        <legend>Cadrage</legend>
+        <div class="segmented three">
+          <label><input type="radio" name="fit" value="cover" checked> Remplir</label>
+          <label><input type="radio" name="fit" value="contain"> Ajuster</label>
+          <label><input type="radio" name="fit" value="stretch"> Étirer</label>
+        </div>
+      </fieldset>
+      <fieldset class="option">
+        <legend>Rendu</legend>
+        <div class="segmented">
+          <label><input type="radio" name="mode" value="smooth" checked> Lisse (photo)</label>
+          <label><input type="radio" name="mode" value="sharp"> Net (pixel art)</label>
+        </div>
+      </fieldset>
+
+      <div class="dialog-actions">
+        <button class="secondary" value="cancel">Annuler</button>
+        <button class="primary" value="import" id="import-confirm">Importer dans l'éditeur</button>
+      </div>
+    </form>
+  </dialog>
+
+  <div class="toast" id="toast" role="alert" hidden></div>
+</body>
+</html>
