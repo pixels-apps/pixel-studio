@@ -18,5 +18,8 @@ struct TimeboxBridgeApp: App {
             LogWindow(model: model)
         }
         .defaultSize(width: 720, height: 420)
+        Settings {
+            SettingsView(model: model)
+        }
     }
 }

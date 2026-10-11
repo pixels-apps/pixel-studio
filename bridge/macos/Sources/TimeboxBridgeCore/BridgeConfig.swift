@@ -16,6 +16,18 @@ public struct BridgeConfig: Equatable, Sendable {
 
     public init() {}
 
+    /// Port saisi dans les réglages : entier de 1 à 65535 (espaces ignorés), sinon `nil`.
+    public static func port(from text: String) -> UInt16? {
+        guard let p = UInt16(text.trimmingCharacters(in: .whitespaces)), p > 0 else { return nil }
+        return p
+    }
+
+    /// Hôte limité à cette machine : sinon, n'importe quel appareil du réseau peut piloter le Timebox.
+    public static func isLoopback(host: String) -> Bool {
+        let h = host.trimmingCharacters(in: .whitespaces).lowercased()
+        return h == "localhost" || h == "::1" || h.hasPrefix("127.")
+    }
+
     /// Ce que demande la ligne de commande.
     public enum Command: Equatable, Sendable {
         case run(BridgeConfig)

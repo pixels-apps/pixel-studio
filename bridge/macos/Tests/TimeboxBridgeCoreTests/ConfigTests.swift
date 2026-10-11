@@ -56,6 +56,27 @@ struct ConfigTests {
     }
 }
 
+struct SettingsValidationTests {
+    @Test(arguments: [("7777", UInt16(7777)), (" 80 ", 80), ("1", 1), ("65535", 65535)])
+    func portValide(text: String, port: UInt16) {
+        #expect(BridgeConfig.port(from: text) == port)
+    }
+
+    @Test(arguments: ["", "0", "65536", "-1", "77a", "7777.5"])
+    func portInvalide(text: String) {
+        #expect(BridgeConfig.port(from: text) == nil)
+    }
+
+    @Test func hoteLocal() {
+        for h in ["127.0.0.1", "127.1.2.3", "localhost", "LocalHost", "::1", " 127.0.0.1 "] {
+            #expect(BridgeConfig.isLoopback(host: h), "\(h)")
+        }
+        for h in ["0.0.0.0", "192.168.1.10", "::", "macbook.local"] {
+            #expect(!BridgeConfig.isLoopback(host: h), "\(h)")
+        }
+    }
+}
+
 struct DeviceAndLogTests {
     @Test(arguments: ["TimeBox-Evo-audio", "TimeBox-Evo-light", "Pixoo-64", "Ditoo-Pro", "DIVOOM x"])
     func appareilsDivoom(name: String) {
