@@ -1,7 +1,9 @@
 #!/bin/sh
-# Compile timebox-bridge avec un Info.plist intégré (déclaration d'usage du Bluetooth exigée par macOS).
+# Compile la ligne de commande timebox-bridge (les outils en ligne de commande d'Xcode suffisent).
+# L'Info.plist intégré (déclaration d'usage du Bluetooth) est ajouté par Package.swift.
 set -e
 cd "$(dirname "$0")"
-swiftc -O main.swift -o timebox-bridge \
-  -Xlinker -sectcreate -Xlinker __TEXT -Xlinker __info_plist -Xlinker Info.plist
-echo "ok : $(pwd)/timebox-bridge"
+swift build -c release --product timebox-bridge
+mkdir -p build
+cp "$(swift build -c release --show-bin-path)/timebox-bridge" build/
+echo "ok : $(pwd)/build/timebox-bridge"
