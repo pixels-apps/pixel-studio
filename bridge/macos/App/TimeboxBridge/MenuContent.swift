@@ -5,6 +5,7 @@ import TimeboxBridgeCore
 struct MenuContent: View {
     let model: BridgeModel
     @Environment(\.openWindow) private var openWindow
+    @Environment(\.openSettings) private var openSettings
 
     var body: some View {
         Text(model.summary)
@@ -23,6 +24,11 @@ struct MenuContent: View {
             openWindow(id: LogWindow.id)
         }
         .keyboardShortcut("l")
+        Button("Réglages…") {
+            NSApp.activate()
+            openSettings()
+        }
+        .keyboardShortcut(",")
         Divider()
         Button("Quitter Timebox Bridge") { model.quit() }
             .keyboardShortcut("q")

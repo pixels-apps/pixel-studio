@@ -1,5 +1,6 @@
 import AppKit
 import Observation
+import ServiceManagement
 import TimeboxBridgeCore
 
 /// État de l'application : possède le relais, relaie son état vers le menu, lit les réglages.
@@ -15,6 +16,11 @@ final class BridgeModel {
     private(set) var devices: [PairedDevice] = []
     /// Change à chaque nouveau message du journal (la fenêtre Journal relit `logBuffer`).
     private(set) var logRevision = 0
+    /// Journal verbeux (chaque octet échangé).
+    private(set) var verbose = false
+    /// Lancement à l'ouverture de session (relu : l'utilisateur peut le changer dans Réglages système).
+    private(set) var loginItemStatus = SMAppService.mainApp.status
+    private(set) var loginItemError: String?
 
     @ObservationIgnored let logBuffer = LogBuffer()
     @ObservationIgnored private var bridge: Bridge?
@@ -26,7 +32,8 @@ final class BridgeModel {
             buffer.append(entry)
             DispatchQueue.main.async { self?.logRevision += 1 }
         }
-        Log.shared.verbose = defaults.bool(forKey: "verbose")
+        verbose = defaults.bool(forKey: "verbose")
+        Log.shared.verbose = verbose
         refreshDevices()
         start()
     }
@@ -34,12 +41,50 @@ final class BridgeModel {
     /// Configuration lue dans les réglages (`UserDefaults`) ; adresse absente = aucun appareil choisi.
     private func config() -> BridgeConfig? {
         guard let address = defaults.string(forKey: "address"), !address.isEmpty else { return nil }
-        var c = BridgeConfig()
+        var c = settings
         c.address = address
+        return c
+    }
+
+    /// Réglages du relais (hôte, port, tentatives), valeurs par défaut de la CLI si absents.
+    var settings: BridgeConfig {
+        var c = BridgeConfig()
         if let host = defaults.string(forKey: "host"), !host.isEmpty { c.host = host }
         if let port = UInt16(exactly: defaults.integer(forKey: "port")), port != 0 { c.port = port }
         if defaults.integer(forKey: "retries") > 0 { c.retries = defaults.integer(forKey: "retries") }
         return c
+    }
+
+    /// Enregistre les réglages du relais et le redémarre (le client connecté est déconnecté).
+    func apply(host: String, port: UInt16, retries: Int) {
+        let host = host.trimmingCharacters(in: .whitespaces)
+        defaults.set(host, forKey: "host")
+        defaults.set(Int(port), forKey: "port")
+        defaults.set(retries, forKey: "retries")
+        Log.shared.info("réglages : écoute \(host):\(port), \(retries) essais d'ouverture")
+        start()
+    }
+
+    func setVerbose(_ on: Bool) {
+        verbose = on
+        defaults.set(on, forKey: "verbose")
+        Log.shared.verbose = on
+        Log.shared.info("journal verbeux : \(on ? "activé" : "désactivé")")
+    }
+
+    func refreshLoginItem() {
+        loginItemStatus = SMAppService.mainApp.status
+    }
+
+    func setLaunchAtLogin(_ on: Bool) {
+        loginItemError = nil
+        do {
+            if on { try SMAppService.mainApp.register() } else { try SMAppService.mainApp.unregister() }
+        } catch {
+            loginItemError = error.localizedDescription
+        }
+        refreshLoginItem()
+        Log.shared.info("ouverture de session : \(loginItemStatus == .enabled ? "activée" : "désactivée")")
     }
 
     func start() {
