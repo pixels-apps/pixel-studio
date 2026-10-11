@@ -159,18 +159,25 @@ struct RelayTests {
         let first = device.last
         relay.reconnect()
         #expect(first.closed)
+        #expect(relay.channelState == .closed)
+        relay.received(Data([0x01]), from: 1)  // envoi pendant l'attente : pas d'ouverture anticipée
+        #expect(device.attempts.count == 1)
+        clock.advance(by: 1)  // réouverture après 1 s
         #expect(device.attempts.count == 2)
         #expect(relay.channelState == .opening(attempt: 1, of: 3))
+        device.complete()
+        #expect(device.last.writes == [[0x01]])
     }
 
     @Test func reconnecterPendantUneOuverture() {
         relay.clientConnected(1, description: "client")
         device.complete(-1)  // nouvel essai prévu dans 1 s
         relay.reconnect()
+        clock.advance(by: 1)  // l'ancien nouvel essai est annulé ; réouverture après 1 s
         #expect(device.attempts.count == 2)
-        clock.advance(by: 1)  // l'ancien nouvel essai est annulé
+        clock.advance(by: 5)  // délai du nouvel essai (t = 6 s), puis essai suivant (t = 7 s)
         #expect(device.attempts.count == 2)
-        clock.advance(by: 5)  // délai du nouvel essai (t = 5 s), puis essai suivant (t = 6 s)
+        clock.advance(by: 1)
         #expect(device.attempts.count == 3)
         #expect(relay.channelState == .opening(attempt: 2, of: 3))
     }

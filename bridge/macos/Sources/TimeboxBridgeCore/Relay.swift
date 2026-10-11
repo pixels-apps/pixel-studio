@@ -82,11 +82,14 @@ public final class Relay: BluetoothChannelDelegate {
 
     // MARK: Commandes
 
-    /// Ferme le canal (ou abandonne l'ouverture en cours) et le rouvre.
+    /// Ferme le canal (ou abandonne l'ouverture en cours) et le rouvre après `retryDelay` : une
+    /// réouverture immédiate reste sans réponse (constaté avec le Timebox Evo).
     public func reconnect() {
-        log.info("reconnexion demandée")
+        log.info("reconnexion demandée (réouverture dans \(seconds(config.retryDelay)))")
         closeChannel()
-        ensureChannel()
+        opening = true
+        attempt = 0
+        retry = scheduler.schedule(after: config.retryDelay) { [weak self] in self?.tryOpen() }
     }
 
     /// Ferme le canal et déconnecte le client.

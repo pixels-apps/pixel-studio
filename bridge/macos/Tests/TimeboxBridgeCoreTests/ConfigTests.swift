@@ -69,7 +69,7 @@ struct DeviceAndLogTests {
 
     @Test func tamponCirculaire() {
         let buffer = LogBuffer(capacity: 3)
-        let log = Log()
+        let log = Log(systemLog: false)
         log.addSink { buffer.append($0) }
         for i in 1...5 { log.info("m\(i)") }
         #expect(buffer.messages == ["m3", "m4", "m5"])

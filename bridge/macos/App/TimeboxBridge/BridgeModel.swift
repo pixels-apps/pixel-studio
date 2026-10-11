@@ -11,6 +11,10 @@ final class BridgeModel {
     private(set) var startError: String?
     private(set) var address: String?
     private(set) var deviceName: String?
+    /// Appareils appairés (actualisés au lancement, au choix d'un appareil et à la demande).
+    private(set) var devices: [PairedDevice] = []
+    /// Change à chaque nouveau message du journal (la fenêtre Journal relit `logBuffer`).
+    private(set) var logRevision = 0
 
     @ObservationIgnored let logBuffer = LogBuffer()
     @ObservationIgnored private var bridge: Bridge?
@@ -18,8 +22,12 @@ final class BridgeModel {
 
     init() {
         let buffer = logBuffer
-        Log.shared.addSink { buffer.append($0) }
+        Log.shared.addSink { [weak self] entry in
+            buffer.append(entry)
+            DispatchQueue.main.async { self?.logRevision += 1 }
+        }
         Log.shared.verbose = defaults.bool(forKey: "verbose")
+        refreshDevices()
         start()
     }
 
@@ -62,12 +70,61 @@ final class BridgeModel {
         state = BridgeState()
     }
 
+    /// Choisit l'appareil à relayer (mémorisé) et redémarre le relais.
+    func select(_ device: PairedDevice) {
+        guard device.address.caseInsensitiveCompare(address ?? "") != .orderedSame else { return }
+        Log.shared.info("appareil choisi : \(device.name) (\(device.address))")
+        defaults.set(device.address, forKey: "address")
+        start()
+    }
+
+    func refreshDevices() {
+        devices = PairedDevice.paired().sorted { $0.name.localizedStandardCompare($1.name) == .orderedAscending }
+    }
+
+    func reconnect() {
+        bridge?.reconnect()
+    }
+
+    var canReconnect: Bool { bridge != nil && state.listener != .stopped }
+
+    func clearLog() {
+        logBuffer.clear()
+        logRevision += 1
+    }
+
     func quit() {
         stop()
         NSApp.terminate(nil)
     }
 
     // MARK: Présentation
+
+    var listenerLine: String {
+        switch state.listener {
+        case .stopped: "Écoute : arrêtée"
+        case .starting: "Écoute : démarrage…"
+        case .listening(let host, let port): "Écoute : \(host):\(port)"
+        case .failed(let message): "Écoute impossible : \(message)"
+        }
+    }
+
+    var channelLine: String {
+        switch state.channel {
+        case .closed: "Bluetooth : canal fermé (ouverture à la connexion d'un client)"
+        case .opening(let attempt, let total): "Bluetooth : ouverture (essai \(attempt)/\(total))…"
+        case .open(let mtu): "Bluetooth : canal ouvert (MTU \(mtu))"
+        case .gaveUp(let reason): "Bluetooth : échec (\(reason)), nouvel essai au prochain envoi"
+        }
+    }
+
+    var clientLine: String {
+        state.client.map { "Client : \($0)" } ?? "Client : aucun"
+    }
+
+    var bytesLine: String {
+        "Octets : \(state.bytesToDevice) envoyés · \(state.bytesFromDevice) reçus"
+    }
 
     enum Status {
         case noDevice, stopped, listening, opening, connected, error
