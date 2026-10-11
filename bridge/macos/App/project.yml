@@ -1,0 +1,48 @@
+# Application de barre de menu « Timebox Bridge ». Le projet Xcode est généré à partir de ce
+# fichier (xcodegen generate, ou ../build-app.sh) : tout réglage se fait ici, pas dans Xcode.
+name: TimeboxBridge
+options:
+  deploymentTarget:
+    macOS: "14.0"
+  createIntermediateGroups: true
+packages:
+  TimeboxBridge:
+    path: ..
+settings:
+  base:
+    SWIFT_VERSION: "5.0"
+    MARKETING_VERSION: "0.1.0"
+    CURRENT_PROJECT_VERSION: "1"
+targets:
+  TimeboxBridge:
+    type: application
+    platform: macOS
+    # Signature : Base.xcconfig (ad hoc) + Local.xcconfig facultatif (voir Local.xcconfig.example).
+    # Sur la cible, sinon XcodeGen impose « Mac Development ».
+    configFiles:
+      Debug: Base.xcconfig
+      Release: Base.xcconfig
+    sources: [TimeboxBridge]
+    dependencies:
+      - package: TimeboxBridge
+        product: TimeboxBridgeCore
+    info:
+      path: TimeboxBridge/Info.plist
+      properties:
+        CFBundleDisplayName: Timebox Bridge
+        CFBundleName: Timebox Bridge
+        LSApplicationCategoryType: public.app-category.utilities
+        LSUIElement: true
+        NSBluetoothAlwaysUsageDescription: Relayer les échanges avec l'appareil Divoom (Timebox Evo).
+    entitlements:
+      path: TimeboxBridge/TimeboxBridge.entitlements
+      properties:
+        com.apple.security.app-sandbox: true
+        com.apple.security.device.bluetooth: true
+        com.apple.security.network.server: true
+    settings:
+      base:
+        PRODUCT_NAME: Timebox Bridge
+        PRODUCT_BUNDLE_IDENTIFIER: calm.show.timebox-bridge
+        ENABLE_HARDENED_RUNTIME: YES
+        GENERATE_INFOPLIST_FILE: NO

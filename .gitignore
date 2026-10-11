@@ -19,3 +19,6 @@ build/
 .build/
 .swiftpm/
 *.tmp
+# Menu bar app (XcodeGen): generated project, personal signing settings
+bridge/macos/App/*.xcodeproj/
+bridge/macos/App/Local.xcconfig

@@ -45,6 +45,9 @@ public final class Bridge {
     }
     public var onStateChange: (BridgeState) -> Void = { _ in }
 
+    /// Nom Bluetooth de l'appareil (ex. « TimeBox-Evo-audio »).
+    public var deviceName: String? { device.name }
+
     let device: BluetoothDevice
     let relay: Relay
     let log: Log

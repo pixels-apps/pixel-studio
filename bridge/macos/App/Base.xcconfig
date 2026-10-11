@@ -1,0 +1,6 @@
+// Signature par défaut : « Sign to Run Locally » (ad hoc), utilisable sans compte Apple.
+// macOS redemande alors l'autorisation Bluetooth après chaque compilation : pour l'éviter, copier
+// Local.xcconfig.example en Local.xcconfig (ignoré par git) et y mettre son équipe.
+CODE_SIGN_STYLE = Manual
+CODE_SIGN_IDENTITY = -
+#include? "Local.xcconfig"
