@@ -48,8 +48,8 @@ constraints that shaped the code) and
 
    ```bash
    bridge/macos/build.sh
-   bridge/macos/timebox-bridge --list                        # find your device address (→ marks Divoom devices)
-   bridge/macos/timebox-bridge --address AA-BB-CC-DD-EE-FF   # add --verbose to see the bytes
+   bridge/macos/build/timebox-bridge --list                        # find your device address (→ marks Divoom devices)
+   bridge/macos/build/timebox-bridge --address AA-BB-CC-DD-EE-FF   # add --verbose to see the bytes
    ```
 
    Wait for `écoute sur 127.0.0.1:7777` ("listening"). Close the Divoom phone app: it can hold
@@ -124,7 +124,7 @@ src/timebox/evo/
   imaging.py     image decoding with javax.imageio
   controller.py  REST API and error handling
 config/public/   web UI (plain HTML/CSS/JS, no build step)
-bridge/macos/    Bluetooth RFCOMM ↔ TCP relay (Swift)
+bridge/macos/    Bluetooth RFCOMM ↔ TCP relay (Swift package: shared core + CLI)
 tools/           bridge-client.py, a dependency-free test client for the relay
 docs/            protocol and architecture notes
 tests/           pytest
