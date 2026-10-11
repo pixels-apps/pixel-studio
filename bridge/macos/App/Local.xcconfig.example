@@ -1,0 +1,4 @@
+// Copier en Local.xcconfig (ignoré par git). Identifiant d'équipe = champ OU du certificat :
+//   security find-certificate -c "Apple Development" -p | openssl x509 -noout -subject
+DEVELOPMENT_TEAM = XXXXXXXXXX
+CODE_SIGN_IDENTITY = Apple Development

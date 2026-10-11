@@ -1,6 +1,7 @@
 #!/bin/sh
 # Lance les tests du cœur (Swift Testing). Utilise Xcode s'il est installé ; sinon les outils en
 # ligne de commande, en indiquant où se trouve Testing.framework (que SwiftPM n'y trouve pas seul).
+# Un dossier de compilation par chaîne d'outils : les mélanger casse l'édition de liens.
 set -e
 cd "$(dirname "$0")"
 xcode=/Applications/Xcode.app/Contents/Developer
@@ -12,10 +13,10 @@ case "$dev" in
   *CommandLineTools*)
     fw="$dev/Library/Developer/Frameworks"
     lib="$dev/Library/Developer/usr/lib"
-    exec swift test -Xswiftc -F -Xswiftc "$fw" -Xlinker -F -Xlinker "$fw" \
+    exec swift test --scratch-path .build/clt -Xswiftc -F -Xswiftc "$fw" -Xlinker -F -Xlinker "$fw" \
       -Xlinker -rpath -Xlinker "$fw" -Xlinker -rpath -Xlinker "$lib" "$@"
     ;;
   *)
-    exec swift test "$@"
+    exec swift test --scratch-path .build/xcode "$@"
     ;;
 esac
