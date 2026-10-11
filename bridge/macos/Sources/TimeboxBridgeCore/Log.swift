@@ -14,8 +14,14 @@ public final class Log: @unchecked Sendable {
     private let lock = NSLock()
     private var sinks: [@Sendable (Entry) -> Void] = []
     private var _verbose = false
-    private let logger = Logger(subsystem: Bundle.main.bundleIdentifier ?? "calm.show.timebox-bridge",
-                                category: "bridge")
+    private let logger: Logger?
+
+    /// `systemLog` : écrire aussi dans le journal système (désactivé dans les tests).
+    init(systemLog: Bool = true) {
+        logger = systemLog
+            ? Logger(subsystem: Bundle.main.bundleIdentifier ?? "calm.show.timebox-bridge", category: "bridge")
+            : nil
+    }
 
     /// Journal verbeux : chaque octet échangé est journalisé. Modifiable à chaud.
     public var verbose: Bool {
@@ -28,7 +34,7 @@ public final class Log: @unchecked Sendable {
     }
 
     public func info(_ message: String) {
-        logger.notice("\(message, privacy: .public)")
+        logger?.notice("\(message, privacy: .public)")
         let entry = Entry(date: Date(), message: message)
         for sink in lock.withLock({ sinks }) { sink(entry) }
     }

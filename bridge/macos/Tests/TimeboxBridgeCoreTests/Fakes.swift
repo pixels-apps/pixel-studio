@@ -92,9 +92,9 @@ final class ManualScheduler: Scheduler {
     }
 }
 
-/// Journal de test : messages en mémoire, sans sortie standard.
+/// Journal de test : messages en mémoire, ni sortie standard ni journal système.
 func testLog() -> (Log, LogBuffer) {
-    let log = Log()
+    let log = Log(systemLog: false)
     let buffer = LogBuffer()
     log.addSink { buffer.append($0) }
     return (log, buffer)

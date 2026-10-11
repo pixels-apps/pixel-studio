@@ -14,19 +14,9 @@ struct TimeboxBridgeApp: App {
             Image(systemName: model.symbol)
                 .accessibilityLabel("Timebox Bridge : \(model.summary)")
         }
-    }
-}
-
-struct MenuContent: View {
-    let model: BridgeModel
-
-    var body: some View {
-        Text(model.summary)
-        if model.status == .noDevice {
-            Text("Choix de l'appareil : bientôt dans ce menu")
+        Window("Journal de Timebox Bridge", id: LogWindow.id) {
+            LogWindow(model: model)
         }
-        Divider()
-        Button("Quitter Timebox Bridge") { model.quit() }
-            .keyboardShortcut("q")
+        .defaultSize(width: 720, height: 420)
     }
 }
