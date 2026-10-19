@@ -36,7 +36,13 @@ struct ConfigTests {
 
     @Test func valeurNumeriqueInvalideIgnoree() throws {
         let c = try run(["--address", "A", "--port", "99999", "--channel", "x"])
-        #expect(c.port == 7777 && c.channel == 1)
+        #expect(c.port == 7777 && c.channel == 1 && !c.channelIsExplicit)
+    }
+
+    @Test func canalImpose() throws {
+        #expect(try !run(["--address", "A"]).channelIsExplicit)
+        #expect(try run(["--address", "A", "--channel", "2"]).channelIsExplicit)
+        #expect(try run(["--address", "A"], ["TIMEBOX_CHANNEL": "2"]).channelIsExplicit)
     }
 
     @Test func adresseManquante() {

@@ -4,7 +4,7 @@ import TimeboxBridgeCore
 // timebox-bridge : relais transparent TCP <-> RFCOMM pour le Divoom Timebox Evo (macOS).
 // Le relais lui-même est dans TimeboxBridgeCore (partagé avec l'application de barre de menu).
 //
-// Usage : timebox-bridge --address AA-BB-CC-DD-EE-FF [--channel 1] [--host 127.0.0.1]
+// Usage : timebox-bridge --address AA-BB-CC-DD-EE-FF [--channel N] [--host 127.0.0.1]
 //                        [--port 7777] [--retries 5] [--verbose]
 //         timebox-bridge --list      (appareils appairés, pour trouver l'adresse)
 // Équivalents en variables d'environnement : TIMEBOX_ADDRESS, TIMEBOX_CHANNEL, BRIDGE_HOST,
@@ -22,30 +22,41 @@ do {
 let config: BridgeConfig
 switch command {
 case .help:
-    print("usage: timebox-bridge --address AA-BB-CC-DD-EE-FF [--channel 1] "
+    print("usage: timebox-bridge --address AA-BB-CC-DD-EE-FF [--channel N] "
         + "[--host 127.0.0.1] [--port 7777] [--retries 5] [--verbose]")
     print("       timebox-bridge --list    (appareils Bluetooth appairés)")
+    print("--channel : canal RFCOMM ; par défaut, celui du port série de l'appareil (sinon 1)")
     exit(0)
 case .list:
     let devices = PairedDevice.paired()
     if devices.isEmpty { print("aucun appareil appairé (Réglages système → Bluetooth)") }
     for d in devices {
-        print("\(d.isDivoom ? "→" : " ") \(d.address)  \(d.name)\(d.isConnected ? "  (connecté)" : "")")
+        let channel = d.serialChannel.map { "  [port série : canal \($0)]" } ?? ""
+        print("\(d.isDivoom ? "→" : " ") \(d.address)  \(d.name)\(d.isConnected ? "  (connecté)" : "")\(channel)")
     }
     exit(0)
-case .run(let c):
+case .run(var c):
+    if !c.channelIsExplicit {
+        c.channel = PairedDevice.serialChannel(address: c.address) ?? 1
+    }
     config = c
 }
 
 Log.shared.verbose = config.verbose
 Log.shared.addSink(Log.standardOutput)
+if !config.channelIsExplicit {
+    Log.shared.info("canal RFCOMM \(config.channel) (port série de l'appareil, sinon 1 ; --channel pour l'imposer)")
+}
 
 // Le code de premier niveau tourne sur le fil principal, comme tout le relais.
 let bridge: Bridge = MainActor.assumeIsolated {
     do {
         let bridge = try Bridge(config: config)
         bridge.onStateChange = { state in
-            if case .failed = state.listener { exit(1) }
+            switch state.listener {
+            case .failed, .portInUse: exit(1)
+            default: break
+            }
         }
         try bridge.start()
         return bridge

@@ -19,6 +19,19 @@ does not document the protocol. Credits for the original reverse engineering in
 - The connection stays open while idle (tested over 30 s); no keep-alive needed.
 - Only one client at a time: close the Divoom phone app.
 
+### Divoom Pixoo (16×16)
+
+Observed on one Pixoo (October 2026), same frames and commands:
+
+- Classic Bluetooth identity `Pixoo` (plus a BLE advertisement, not used). Its **Serial Port**
+  service (UUID `0x1101`) is on **RFCOMM channel 2**; channel 10 carries a vendor service
+  (`JL_SPP`, JieLi chip, UUID `fe010000-1234-5678-abcd-00805f9b34fb`); there is no channel 1.
+- First opening attempt fails, the second succeeds — as on the Evo.
+- `46` gets the usual `04 46 55 …` reply, with two more data bytes; the device also sends an
+  unsolicited `04 f7 55 …` frame.
+- Images (`44`) are displayed but **not acknowledged**. pixel-studio therefore confirms an image
+  by reading the state (`46`) right after it, which both devices answer once the image is handled.
+
 ## Frames
 
 ```
@@ -40,7 +53,7 @@ sends unsolicited status frames.
 | `45 VV` | switch view (`00` clock, `01` light, …) | `45 55 VV` |
 | `45 01 RR GG BB BB EE PP 00 00 00` | light view: color, brightness 0–100, effect (`00` = solid), power (`01`) | `31 55 xx` (unsolicited) then `45 55 01` |
 | `74 BB` | brightness 0–100 | `32 55 BB` |
-| `44 00 0a 0a 04` + frame | display a 16×16 image | `44 55 XX` (`XX` varies, meaning unknown) |
+| `44 00 0a 0a 04` + frame | display a 16×16 image | `44 55 XX` (`XX` varies, meaning unknown); none on the Pixoo |
 
 Examples (complete frames): brightness 50 → `01 04 00 74 32 aa 00 02`; solid red at 100 % →
 `01 0d 00 45 01 ff 00 00 64 00 01 00 00 00 b7 01 02`.

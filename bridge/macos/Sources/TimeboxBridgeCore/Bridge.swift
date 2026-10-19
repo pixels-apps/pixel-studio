@@ -13,6 +13,8 @@ public struct BridgeState: Equatable, Sendable {
         case stopped
         case starting
         case listening(host: String, port: UInt16)
+        /// Port déjà utilisé (souvent : un autre relais, CLI ou application, tourne déjà).
+        case portInUse(UInt16)
         case failed(String)
     }
 
@@ -46,7 +48,7 @@ public final class Bridge {
     public var onStateChange: (BridgeState) -> Void = { _ in }
 
     /// Nom Bluetooth de l'appareil (ex. « TimeBox-Evo-audio »).
-    public var deviceName: String? { device.name }
+    public var deviceName: String? { device.name.flatMap { $0.isEmpty ? nil : $0 } }
 
     let device: BluetoothDevice
     let relay: Relay
@@ -54,6 +56,7 @@ public final class Bridge {
     private var listener: NWListener?
     private var connections: [Relay.ClientID: NWConnection] = [:]
     private var nextClientID = 0
+    private var portInUseLogged = false
 
     /// `device` : appareil à utiliser (par défaut, l'appareil IOBluetooth de `config.address`).
     public init(config: BridgeConfig, device: BluetoothDevice? = nil, scheduler: Scheduler = MainQueueScheduler(),
@@ -73,12 +76,23 @@ public final class Bridge {
     // MARK: Commandes
 
     public func start() throws {
+        try listen()
+        log.info("relais vers \(deviceName ?? "un appareil inconnu") (\(config.address)), canal RFCOMM \(config.channel)")
+    }
+
+    /// (Re)lance l'écoute TCP seule, par exemple quand le port était déjà utilisé.
+    public func listen() throws {
+        listener?.cancel()
         let params = NWParameters.tcp
         params.allowLocalEndpointReuse = true
         params.requiredLocalEndpoint = .hostPort(host: .init(config.host), port: .init(rawValue: config.port)!)
         let listener = try NWListener(using: params)
-        listener.stateUpdateHandler = { [weak self] st in
-            MainActor.assumeIsolated { self?.listenerChanged(st) }
+        listener.stateUpdateHandler = { [weak self, weak listener] st in
+            MainActor.assumeIsolated {
+                // ignore un ancien écouteur (remplacé par un nouvel essai)
+                guard let self, let listener, listener === self.listener else { return }
+                self.listenerChanged(st)
+            }
         }
         listener.newConnectionHandler = { [weak self] connection in
             MainActor.assumeIsolated { self?.accept(connection) }
@@ -86,7 +100,6 @@ public final class Bridge {
         state.listener = .starting
         listener.start(queue: .main)
         self.listener = listener
-        log.info("relais vers \(device.name ?? config.address) (\(config.address)), canal RFCOMM \(config.channel)")
     }
 
     /// Arrête l'écoute, déconnecte le client et ferme le canal.
@@ -105,16 +118,34 @@ public final class Bridge {
         relay.reconnect()
     }
 
+    /// Mise en veille du Mac : ferme le canal (rouvert au prochain envoi), garde l'écoute et le client.
+    public func suspend() {
+        relay.suspend()
+    }
+
     // MARK: TCP
 
     private func listenerChanged(_ st: NWListener.State) {
         switch st {
         case .ready:
+            portInUseLogged = false
             log.info("écoute sur \(config.host):\(config.port)")
             state.listener = .listening(host: config.host, port: config.port)
         case .failed(let error):
-            log.info("écoute impossible : \(error)")
-            state.listener = .failed("\(error)")
+            switch error {
+            case .posix(.EADDRINUSE):
+                if !portInUseLogged {  // une seule fois tant que le port reste pris
+                    log.info("écoute impossible : port \(config.port) déjà utilisé (un autre relais tourne-t-il ?)")
+                    portInUseLogged = true
+                }
+                state.listener = .portInUse(config.port)
+            case .posix(.EADDRNOTAVAIL):
+                log.info("écoute impossible : adresse \(config.host) indisponible sur ce Mac")
+                state.listener = .failed("adresse \(config.host) indisponible sur ce Mac")
+            default:
+                log.info("écoute impossible : \(error)")
+                state.listener = .failed("\(error)")
+            }
             listener?.cancel()
             listener = nil
         default:

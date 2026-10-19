@@ -4,6 +4,8 @@ import Foundation
 public struct BridgeConfig: Equatable, Sendable {
     public var address = ""
     public var channel: UInt8 = 1
+    /// Canal imposé (option ou variable d'environnement) ; sinon la CLI prend le canal du port série.
+    public var channelIsExplicit = false
     public var host = "127.0.0.1"
     public var port: UInt16 = 7777
     public var retries = 5
@@ -45,7 +47,7 @@ public struct BridgeConfig: Equatable, Sendable {
     public static func parse(arguments: [String], environment: [String: String]) throws -> Command {
         var c = BridgeConfig()
         if let v = environment["TIMEBOX_ADDRESS"] { c.address = v }
-        if let v = environment["TIMEBOX_CHANNEL"].flatMap(UInt8.init) { c.channel = v }
+        if let v = environment["TIMEBOX_CHANNEL"].flatMap(UInt8.init) { c.channel = v; c.channelIsExplicit = true }
         if let v = environment["BRIDGE_HOST"] { c.host = v }
         if let v = environment["BRIDGE_PORT"].flatMap(UInt16.init) { c.port = v }
         if let v = environment["BRIDGE_RETRIES"].flatMap(Int.init) { c.retries = v }
@@ -55,7 +57,8 @@ public struct BridgeConfig: Equatable, Sendable {
         while let arg = args.next() {
             switch arg {
             case "--address": c.address = args.next() ?? c.address
-            case "--channel": c.channel = args.next().flatMap(UInt8.init) ?? c.channel
+            case "--channel":
+                if let v = args.next().flatMap(UInt8.init) { c.channel = v; c.channelIsExplicit = true }
             case "--host": c.host = args.next() ?? c.host
             case "--port": c.port = args.next().flatMap(UInt16.init) ?? c.port
             case "--retries": c.retries = args.next().flatMap(Int.init) ?? c.retries

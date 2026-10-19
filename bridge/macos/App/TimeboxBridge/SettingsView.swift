@@ -52,6 +52,27 @@ struct SettingsView: View {
                     .foregroundStyle(.secondary)
             }
 
+            if let address = model.address {
+                Section {
+                    Picker("Canal RFCOMM", selection: Binding(
+                        get: { model.channelOverride(for: address) },
+                        set: { model.setChannelOverride($0) }
+                    )) {
+                        Text("Automatique (\(model.detectedChannel.map { "canal \($0)" } ?? "canal 1 par défaut"))")
+                            .tag(UInt8?.none)
+                        ForEach(1...30, id: \.self) { n in
+                            Text("Canal \(n)").tag(UInt8?.some(UInt8(n)))
+                        }
+                    }
+                } header: {
+                    Text("Appareil : \(model.deviceName ?? address)")
+                } footer: {
+                    Text("Automatique : canal du port série relevé par macOS à l'appairage (Timebox Evo : 1, Pixoo : 2).")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+            }
+
             Section("Journal") {
                 Toggle("Journal verbeux (chaque octet échangé)", isOn: Binding(
                     get: { model.verbose }, set: { model.setVerbose($0) }))

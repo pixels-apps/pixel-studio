@@ -9,6 +9,15 @@ struct MenuContent: View {
 
     var body: some View {
         Text(model.summary)
+        if let hint = model.hint {
+            Text(hint)
+        }
+        if model.bluetoothDenied {
+            Button("Ouvrir les réglages de confidentialité…") { model.openBluetoothPrivacySettings() }
+        }
+        if model.isWaitingForPort {
+            Button("Réessayer maintenant") { model.retryListening() }
+        }
         if model.address != nil, model.startError == nil {
             Text(model.listenerLine)
             Text(model.channelLine)
@@ -43,6 +52,12 @@ struct DeviceMenu: View {
         let divoom = model.devices.filter(\.isDivoom)
         let others = model.devices.filter { !$0.isDivoom }
         Menu("Appareil : \(model.deviceName ?? model.address ?? "aucun")") {
+            if let address = model.address, !model.devicePaired {
+                Toggle(isOn: .constant(true)) {
+                    Text("\(model.deviceName ?? address) (non appairé)")
+                }
+                .disabled(true)
+            }
             if divoom.isEmpty {
                 Text("Aucun appareil Divoom appairé")
             }
