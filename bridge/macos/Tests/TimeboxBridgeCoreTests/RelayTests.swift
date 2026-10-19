@@ -182,6 +182,33 @@ struct RelayTests {
         #expect(relay.channelState == .opening(attempt: 2, of: 3))
     }
 
+    @Test func miseEnVeille() {
+        let relay = connected()
+        let first = device.last
+        relay.suspend()
+        #expect(first.closed)
+        #expect(relay.channelState == .closed)
+        #expect(relay.client == 1)  // le client reste connecté
+        relay.received(Data([0x46]), from: 1)  // réouverture au prochain envoi
+        #expect(device.attempts.count == 2)
+        device.complete()
+        #expect(device.last.writes == [[0x46]])
+    }
+
+    @Test func miseEnVeillePendantUneOuverture() {
+        relay.clientConnected(1, description: "client")
+        relay.suspend()
+        #expect(device.last.closed)
+        clock.advance(by: 10)  // ni délai ni nouvel essai
+        #expect(device.attempts.count == 1)
+        #expect(relay.channelState == .closed)
+    }
+
+    @Test func miseEnVeilleSansCanal() {
+        relay.suspend()
+        #expect(messages.messages.isEmpty)
+    }
+
     @Test func arret() {
         var disconnected: [Relay.ClientID] = []
         relay.disconnectClient = { disconnected.append($0) }

@@ -52,19 +52,27 @@ class TimeboxClient:
         self.exchange(protocol.set_view(view))
 
     def send_image(self, pixels: list[bytes]) -> None:
-        """Affiche une image 16×16 (256 couleurs RGB, ligne par ligne)."""
-        self.exchange(protocol.set_image(pixels))
+        """Affiche une image 16×16 (256 couleurs RGB, ligne par ligne).
+
+        Le Timebox Evo acquitte l'image (``04 44 55``), le Pixoo non : dans les deux cas, on confirme
+        par une lecture de l'état (46), à laquelle l'appareil répond une fois l'image traitée.
+        """
+        self.exchange(protocol.get_view(), before=protocol.set_image(pixels))
         self.last_image = [p.hex() for p in pixels]
         self.storage.save_last_image(self.last_image)
 
     # --- Échange de trames ----------------------------------------------------------
 
-    def exchange(self, payload: bytes) -> protocol.Response:
-        """Envoie une commande et attend la réponse qui la confirme."""
+    def exchange(self, payload: bytes, before: bytes | None = None) -> protocol.Response:
+        """Envoie une commande et attend la réponse qui la confirme.
+
+        ``before`` : commande envoyée juste avant, sans attendre de réponse (``payload`` sert alors
+        de confirmation).
+        """
         expected = protocol.EXPECTED_REPLY.get(payload[0], payload[0])
         self.lock.lock()
         try:
-            return self._exchange(payload, expected)
+            return self._exchange(payload, expected, before)
         except (TimeboxUnavailable, KeyboardInterrupt, SystemExit):
             raise
         except BaseException as e:  # sous GraalPy, une exception Java (IOException…) n'hérite pas
@@ -76,8 +84,10 @@ class TimeboxClient:
         finally:
             self.lock.unlock()
 
-    def _exchange(self, payload: bytes, expected: int) -> protocol.Response:
+    def _exchange(self, payload: bytes, expected: int, before: bytes | None) -> protocol.Response:
         self.decoder.feed(self.transport.read_available())  # ignore les messages spontanés en attente
+        if before is not None:
+            self.transport.write(protocol.encode(before))
         self.transport.write(protocol.encode(payload))
 
         deadline = time.monotonic() + self.reply_timeout_ms / 1000

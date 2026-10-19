@@ -2,10 +2,13 @@
 
 Répond de façon synchrone comme l'appareil réel (octets observés, docs/protocol.md) :
 ni socket ni thread (tous deux interdits dans les contextes GraalPy de Pyronaut).
+Avec ``fake-timebox.image-ack=false``, il imite le Pixoo, qui n'acquitte pas les images.
 """
 
+from typing import Annotated
+
 from jakarta.inject import Singleton
-from micronaut.context.annotation import Replaces, Requires
+from micronaut.context.annotation import Replaces, Requires, Value
 
 from timebox.evo import protocol as p
 from timebox.evo.transport import TcpTransport, Transport
@@ -15,6 +18,8 @@ from timebox.evo.transport import TcpTransport, Transport
 @Requires(env="test")
 @Replaces(TcpTransport)
 class FakeTimeboxTransport(Transport):
+    image_ack: Annotated[bool, Value("${fake-timebox.image-ack:true}")]
+
     def __init__(self):
         self.view = p.VIEW_CLOCK
         self.color = bytes.fromhex("ff5000")
@@ -52,6 +57,8 @@ class FakeTimeboxTransport(Transport):
             return [self._reply(p.LIGHTNESS_STATUS, payload[1:2])]
         if command == p.IMAGE:
             self.image, _ = p.decode_frame(payload[len(p.IMAGE_HEADER):])
+            if not self.image_ack:  # Pixoo : image affichée sans accusé
+                return []
             return [self._reply(p.IMAGE, b"\x43")]  # octet final variable sur l'appareil réel
         if command == p.SET_VIEW:
             self.view = payload[1]

@@ -10,10 +10,11 @@ import requests
 from pyronaut.test import MicronautTest, micronaut_test_fixture
 
 
-def start(request, storage_dir):
+def start(request, storage_dir, **properties):
     """Contexte Micronaut de test, avec un dossier de stockage dédié (jamais ~/.pixel-studio)."""
     return micronaut_test_fixture(request, MicronautTest(
-        environments=["test"], transactional=False, properties={"timebox.storage.dir": str(storage_dir)}))
+        environments=["test"], transactional=False,
+        properties={"timebox.storage.dir": str(storage_dir)} | properties))
 
 
 @pytest.fixture
@@ -87,6 +88,17 @@ def test_send_image_json(client):
     assert response.status_code == 200, response.text
     assert response.json()["pixels"] == pixels
     assert client.get("/timebox/image").json()["pixels"] == pixels
+
+
+def test_send_image_without_ack(request, tmp_path):
+    """Le Pixoo affiche l'image sans l'acquitter : la lecture de l'état qui suit la confirme."""
+    fixture = start(request, tmp_path, **{"fake-timebox.image-ack": "false"})
+    try:
+        pixels = ["ff0000", "0000ff"] * 128
+        response = requests.with_context(fixture).post("/timebox/image", json={"pixels": pixels})
+        assert response.status_code == 200, response.text
+    finally:
+        fixture.stop()
 
 
 def test_send_image_accepts_hash_prefix(client):

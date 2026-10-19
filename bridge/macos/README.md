@@ -54,7 +54,7 @@ build/timebox-bridge --address AA-BB-CC-DD-EE-FF   # the Timebox Evo appears as 
 | Option | Environment | Default |
 |--------|-------------|---------|
 | `--address` | `TIMEBOX_ADDRESS` | required |
-| `--channel` | `TIMEBOX_CHANNEL` | `1` |
+| `--channel` | `TIMEBOX_CHANNEL` | the device's Serial Port channel (shown by `--list`), else `1` |
 | `--host` | `BRIDGE_HOST` | `127.0.0.1` |
 | `--port` | `BRIDGE_PORT` | `7777` |
 | `--retries` | `BRIDGE_RETRIES` | `5` |

@@ -15,12 +15,14 @@ exposes a plain TCP socket; the application stays portable and testable.
 
 - Listens on TCP (default `127.0.0.1:7777`), **one client at a time**: a new client replaces the
   previous one.
-- **Transparent**: bytes received over TCP are written as-is to RFCOMM channel 1 (split to the
+- **Transparent**: bytes received over TCP are written as-is to the device's RFCOMM channel (split to the
   MTU), and vice versa. The relay does not parse frames.
 - Owns the Bluetooth link: opens the channel when a client connects or on the first write, retries
   (the first attempt usually fails), reopens on demand if the device closes it; buffers TCP bytes
   until the channel is open.
-- Configuration: device address (required), channel (default 1), TCP host and port, retries.
+- Configuration: device address (required), channel (default: the device's Serial Port channel as
+  recorded by macOS at pairing — 1 on the Timebox Evo, 2 on the Pixoo — else 1), TCP host and port,
+  retries.
 
 Any implementation honoring this contract can replace [`bridge/macos`](../bridge/macos/README.md).
 

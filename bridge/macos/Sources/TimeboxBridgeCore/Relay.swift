@@ -92,6 +92,13 @@ public final class Relay: BluetoothChannelDelegate {
         retry = scheduler.schedule(after: config.retryDelay) { [weak self] in self?.tryOpen() }
     }
 
+    /// Ferme le canal (mise en veille du Mac) ; il sera rouvert au prochain envoi du client.
+    public func suspend() {
+        guard channel != nil || opening else { return }
+        closeChannel()
+        log.info("mise en veille : canal \(config.channel) fermé (réouverture au prochain envoi)")
+    }
+
     /// Ferme le canal et déconnecte le client.
     public func stop() {
         closeChannel()
@@ -138,7 +145,7 @@ public final class Relay: BluetoothChannelDelegate {
         guard let ch = openingChannel else { return }
         openingChannel = nil
         ch.close()
-        log.info("pas de réponse après \(seconds(config.openTimeout)) (canal occupé par un autre programme ?)")
+        log.info("pas de réponse après \(seconds(config.openTimeout)) (appareil éteint ou hors de portée, ou canal pris par un autre programme ?)")
         openFailed("délai dépassé")
     }
 
