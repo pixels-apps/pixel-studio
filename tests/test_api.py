@@ -90,15 +90,36 @@ def test_send_image_json(client):
     assert client.get("/timebox/image").json()["pixels"] == pixels
 
 
-def test_send_image_without_ack(request, tmp_path):
+@pytest.fixture
+def pixoo(request, tmp_path):
+    """Faux appareil qui imite le Pixoo (pas d'accusé 44 ni 45)."""
+    fixture = start(request, tmp_path, **{"fake-timebox.model": "pixoo"})
+    yield requests.with_context(fixture)
+    fixture.stop()
+
+
+def test_pixoo_image_without_ack(pixoo):
     """Le Pixoo affiche l'image sans l'acquitter : la lecture de l'état qui suit la confirme."""
-    fixture = start(request, tmp_path, **{"fake-timebox.image-ack": "false"})
-    try:
-        pixels = ["ff0000", "0000ff"] * 128
-        response = requests.with_context(fixture).post("/timebox/image", json={"pixels": pixels})
-        assert response.status_code == 200, response.text
-    finally:
-        fixture.stop()
+    response = pixoo.post("/timebox/image", json={"pixels": ["ff0000", "0000ff"] * 128})
+    assert response.status_code == 200, response.text
+
+
+def test_pixoo_views(pixoo):
+    """Changements d'écran sans accusé ; « lumière » garde la couleur et la luminosité."""
+    assert pixoo.post("/timebox/color/00ff00?brightness=40").status_code == 200
+    clock = pixoo.post("/timebox/view/clock")
+    assert clock.status_code == 200, clock.text
+    assert clock.json()["view"] == "clock"
+    light = pixoo.post("/timebox/view/light")
+    assert light.status_code == 200, light.text
+    state = light.json()
+    assert (state["view"], state["light_color"], state["brightness"]) == ("light", "00ff00", 40), state
+
+
+def test_pixoo_brightness(pixoo):
+    response = pixoo.post("/timebox/brightness/30")
+    assert response.status_code == 200, response.text
+    assert response.json()["brightness"] == 30
 
 
 def test_send_image_accepts_hash_prefix(client):

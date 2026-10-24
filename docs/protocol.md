@@ -29,8 +29,11 @@ Observed on one Pixoo (October 2026), same frames and commands:
 - First opening attempt fails, the second succeeds — as on the Evo.
 - `46` gets the usual `04 46 55 …` reply, with two more data bytes; the device also sends an
   unsolicited `04 f7 55 …` frame.
-- Images (`44`) are displayed but **not acknowledged**. pixel-studio therefore confirms an image
-  by reading the state (`46`) right after it, which both devices answer once the image is handled.
+- Images (`44`) are displayed but **not acknowledged**; neither are view changes (`45 VV`).
+- `45 01` alone (light view) switches the light on at **brightness 0** (reply `31 55 00`), whereas
+  the Evo restores its last color: send the full light command (color, brightness) instead.
+- pixel-studio therefore confirms every command by reading the state (`46`) right after it, which
+  both devices answer once the command is handled.
 
 ## Frames
 

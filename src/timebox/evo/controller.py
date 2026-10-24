@@ -87,21 +87,18 @@ class TimeboxController:
     def color(self, rgb: str,
               brightness: Annotated[int, QueryValue(defaultValue="100"), Min(0), Max(100)]) -> State:
         """Affiche une couleur unie, ex. POST /timebox/color/ff8800?brightness=50."""
-        self.client.set_color(protocol.parse_color(rgb), brightness)
-        return to_state(self.client.state())
+        return to_state(self.client.set_color(protocol.parse_color(rgb), brightness))
 
     @Post("/brightness/{level}")
     def brightness(self, level: Annotated[int, Min(0), Max(100)]) -> State:
-        self.client.set_brightness(level)
-        return to_state(self.client.state())
+        return to_state(self.client.set_brightness(level))
 
     @Post("/view/{name}")
     def view(self, name: str) -> State:
         """Change d'écran : clock ou light."""
         if name not in VIEWS:
             raise ValueError(f"écran inconnu : {name} (attendu : {', '.join(VIEWS)})")
-        self.client.set_view(VIEWS[name])
-        return to_state(self.client.state())
+        return to_state(self.client.set_view(VIEWS[name]))
 
     @Post("/image")
     def send_image(self, image: Annotated[Image, Body]) -> Image:
