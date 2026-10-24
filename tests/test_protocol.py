@@ -2,7 +2,8 @@
 
 import pytest
 
-from timebox.evo import protocol as p
+from pixel_studio import pixels as px
+from pixel_studio.bluetooth import protocol as p
 
 
 def test_encode_brightness():
@@ -10,7 +11,7 @@ def test_encode_brightness():
 
 
 def test_encode_light_red():
-    frame = p.encode(p.set_light(p.parse_color("ff0000"), brightness=100))
+    frame = p.encode(p.set_light(px.parse_color("ff0000"), brightness=100))
     assert frame.hex(" ") == "01 0d 00 45 01 ff 00 00 64 00 01 00 00 00 b7 01 02"
 
 
@@ -52,7 +53,7 @@ def test_parse_state_from_real_response():
 @pytest.mark.parametrize("value", ["fff", "gg0000", "#12345"])
 def test_parse_color_rejects_invalid(value):
     with pytest.raises(ValueError):
-        p.parse_color(value)
+        px.parse_color(value)
 
 
 def test_brightness_out_of_range():
@@ -122,6 +123,6 @@ def test_image_needs_256_pixels():
 
 
 def test_parse_pixels():
-    assert p.parse_pixels(["#ff0000"] + ["00ff00"] * 255)[:2] == [b"\xff\x00\x00", b"\x00\xff\x00"]
+    assert px.parse_pixels(["#ff0000"] + ["00ff00"] * 255)[:2] == [b"\xff\x00\x00", b"\x00\xff\x00"]
     with pytest.raises(ValueError):
-        p.parse_pixels(["zz0000"] + ["00ff00"] * 255)
+        px.parse_pixels(["zz0000"] + ["00ff00"] * 255)

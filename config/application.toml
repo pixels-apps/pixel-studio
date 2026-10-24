@@ -12,12 +12,11 @@ mapping = '/swagger/**'
 paths = 'classpath:META-INF/swagger/views/swagger-ui'
 mapping = '/swagger-ui/**'
 
-[timebox.bridge]
+# Relais de l'appareil Bluetooth par défaut (créé tant que devices.json n'existe pas) et délais
+[pixel-studio.bridge]
 host = '127.0.0.1'
 port = 7777
 connect-timeout-ms = 2000
-
-[timebox]
 reply-timeout-ms = 2000
 
 [micronaut.router.static-resources.default]

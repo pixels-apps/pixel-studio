@@ -1,2 +1,5 @@
-[timebox]
+# Sécurité : en test, l'appareil par défaut vise un port où aucun relais n'écoute (les tests
+# utilisent le faux appareil ; s'il n'était pas branché, ils échoueraient sans toucher au matériel).
+[pixel-studio.bridge]
+port = 9
 reply-timeout-ms = 500

@@ -1,9 +1,12 @@
-"""Stockage sur disque : galerie d'images (un JSON par image) et dernière image envoyée.
+"""Stockage sur disque : appareils, galerie d'images (un JSON par image), dernières images envoyées.
 
-Arborescence (dossier configurable `timebox.storage.dir`, défaut `~/.pixel-studio`) :
+Arborescence (dossier configurable `pixel-studio.storage.dir`, défaut `~/.pixel-studio`) :
 
-    gallery/<id>.json      {"id", "name", "pixels": [256 × "rrggbb"], "created", "updated"}
-    last-image.json        {"pixels": [...]}
+    devices.json                 {"active": id, "devices": [{"id", "name", "kind", …}]}
+    gallery/<id>.json            {"id", "name", "size", "pixels": [size² × "rrggbb"], "created", "updated"}
+                                 (anciennes images : pas de « size », 16×16)
+    last-image/<appareil>.json   {"pixels": [...]}  (l'appareil ne sait pas renvoyer son image)
+    last-image.json              ancienne dernière image (avant les appareils multiples), relue une fois
 """
 
 import json
@@ -17,7 +20,7 @@ import java
 from jakarta.inject import Singleton
 from micronaut.context.annotation import ConfigurationProperties
 
-from . import protocol
+from . import pixels as px
 
 ReentrantLock = java.type("java.util.concurrent.locks.ReentrantLock")
 Files = java.type("java.nio.file.Files")
@@ -32,7 +35,7 @@ class ImageNotFound(Exception):
     """Aucune image de la galerie ne porte cet identifiant."""
 
 
-@ConfigurationProperties("timebox.storage")
+@ConfigurationProperties("pixel-studio.storage")
 @dataclass
 class StorageConfig:
     dir: str = "~/.pixel-studio"
@@ -52,7 +55,7 @@ def _clean_name(name: str) -> str:
 
 
 def _clean_pixels(pixels: list[str]) -> list[str]:
-    return [p.hex() for p in protocol.parse_pixels(list(pixels))]
+    return [p.hex() for p in px.parse_pixels(list(pixels))]
 
 
 @Singleton
@@ -84,8 +87,9 @@ class Storage:
 
     def create_image(self, name: str, pixels: list[str]) -> dict:
         now = _now()
-        item = {"id": secrets.token_hex(6), "name": _clean_name(name), "pixels": _clean_pixels(pixels),
-                "created": now, "updated": now}
+        clean = _clean_pixels(pixels)
+        item = {"id": secrets.token_hex(6), "name": _clean_name(name), "size": px.size_of(clean),
+                "pixels": clean, "created": now, "updated": now}
         self._write(self._path(item["id"]), item)
         return item
 
@@ -97,6 +101,7 @@ class Storage:
                 item["name"] = _clean_name(name)
             if pixels is not None:
                 item["pixels"] = _clean_pixels(pixels)
+                item["size"] = px.size_of(item["pixels"])
             item["updated"] = _now()
             self._write(self._path(image_id), item)
             return item
@@ -109,17 +114,36 @@ class Storage:
         except FileNotFoundError:
             raise ImageNotFound(image_id) from None
 
-    # --- Dernière image envoyée --------------------------------------------------------
+    # --- Dernière image envoyée, par appareil ------------------------------------------
 
-    def save_last_image(self, pixels: list[str]) -> None:
-        self._write(self.root / "last-image.json", {"pixels": pixels})
+    def save_last_image(self, device_id: str, pixels: list[str]) -> None:
+        self._write(self.root / "last-image" / f"{device_id}.json", {"pixels": pixels})
 
-    def load_last_image(self) -> list[str] | None:
+    def load_last_image(self, device_id: str, legacy: bool = False) -> list[str] | None:
+        """``legacy`` : à défaut, reprendre la dernière image d'avant les appareils multiples."""
+        paths = [self.root / "last-image" / f"{device_id}.json"]
+        if legacy:
+            paths.append(self.root / "last-image.json")
+        for path in paths:
+            try:
+                return _clean_pixels(json.loads(path.read_text(encoding="utf-8"))["pixels"])
+            except (OSError, ValueError, KeyError, TypeError):
+                continue
+        return None
+
+    def delete_last_image(self, device_id: str) -> None:
+        (self.root / "last-image" / f"{device_id}.json").unlink(missing_ok=True)
+
+    # --- Appareils ---------------------------------------------------------------------
+
+    def load_devices(self) -> dict | None:
         try:
-            pixels = json.loads((self.root / "last-image.json").read_text(encoding="utf-8"))["pixels"]
-            return _clean_pixels(pixels)
-        except (OSError, ValueError, KeyError, TypeError):
+            return json.loads((self.root / "devices.json").read_text(encoding="utf-8"))
+        except (OSError, ValueError):
             return None
+
+    def save_devices(self, data: dict) -> None:
+        self._write(self.root / "devices.json", data)
 
     # --- Interne -----------------------------------------------------------------------
 

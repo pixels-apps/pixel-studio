@@ -53,7 +53,8 @@ sends unsolicited status frames.
 | Payload | Effect | Reply |
 |---------|--------|-------|
 | `46` | read the current state | `46 55` + 20–22 bytes (see below) |
-| `45 VV` | switch view (`00` clock, `01` light, …) | `45 55 VV` |
+| `45 VV` | switch view (`00` clock, `01` light, …), keeping the view's current settings | `45 55 VV` |
+| `45 00 01 TT XX WW EE CC RR GG BB` | clock view: style `TT` (`00` full screen … `05` analog round), show time / weather / temperature / calendar (`01` = shown), clock color | `45 55 00` |
 | `45 01 RR GG BB BB EE PP 00 00 00` | light view: color, brightness 0–100, effect (`00` = solid), power (`01`) | `31 55 xx` (unsolicited) then `45 55 01` |
 | `74 BB` | brightness 0–100 | `32 55 BB` |
 | `44 00 0a 0a 04` + frame | display a 16×16 image | `44 55 XX` (`XX` varies, meaning unknown); none on the Pixoo |
@@ -73,6 +74,13 @@ Partial decoding of the data bytes:
 | 7 | effect (`00` = solid) |
 | 8 | power (`01` = on) |
 | 10 | brightness (copy) |
+| 12–14 | clock color (RGB) |
+| 15 | clock style |
+| 16–19 | clock shows time, weather, temperature, calendar (`01` = shown) |
+
+The short form `45 00` keeps the clock settings in place, including its color (an Evo was once found
+with a near-black clock color, `0f0000`, i.e. a black screen). pixel-studio sends the full clock
+command with the current style, options and color, and lets the user change the clock color.
 
 Caveats: while an image is displayed the view still reads `01`; in some modes byte 6 holds values
 above 100 (e.g. `aa`) and byte 8 reads `00` — not decoded yet.
