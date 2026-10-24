@@ -28,13 +28,8 @@ VIEW_LIGHT = 0x01
 
 IMAGE = 0x44
 
-# Commande de la réponse qui confirme chaque commande envoyée.
-# ⚠️ Pour IMAGE, l'accusé (04 44 55 XX) ne garantit pas l'affichage (cf. R=01, docs/protocol.md).
-EXPECTED_REPLY = {
-    SET_VIEW: SET_VIEW,
-    GET_VIEW: GET_VIEW,
-    SET_BRIGHTNESS: LIGHTNESS_STATUS,
-}
+# Les accusés varient selon l'appareil (le Pixoo n'acquitte ni 44 ni 45) : chaque commande est
+# confirmée par la lecture de l'état (46) qui la suit (client.TimeboxClient._apply).
 
 
 def checksum(body: bytes) -> int:

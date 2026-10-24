@@ -2,7 +2,8 @@
 
 Répond de façon synchrone comme l'appareil réel (octets observés, docs/protocol.md) :
 ni socket ni thread (tous deux interdits dans les contextes GraalPy de Pyronaut).
-Avec ``fake-timebox.image-ack=false``, il imite le Pixoo, qui n'acquitte pas les images.
+Avec ``fake-timebox.model=pixoo``, il imite le Pixoo : pas d'accusé pour les images (44) ni les
+changements d'écran (45), et « 45 01 » seul allume la lumière à luminosité 0.
 """
 
 from typing import Annotated
@@ -18,7 +19,7 @@ from timebox.evo.transport import TcpTransport, Transport
 @Requires(env="test")
 @Replaces(TcpTransport)
 class FakeTimeboxTransport(Transport):
-    image_ack: Annotated[bool, Value("${fake-timebox.image-ack:true}")]
+    model: Annotated[str, Value("${fake-timebox.model:evo}")]
 
     def __init__(self):
         self.view = p.VIEW_CLOCK
@@ -57,13 +58,17 @@ class FakeTimeboxTransport(Transport):
             return [self._reply(p.LIGHTNESS_STATUS, payload[1:2])]
         if command == p.IMAGE:
             self.image, _ = p.decode_frame(payload[len(p.IMAGE_HEADER):])
-            if not self.image_ack:  # Pixoo : image affichée sans accusé
+            if self.model == "pixoo":  # image affichée sans accusé
                 return []
             return [self._reply(p.IMAGE, b"\x43")]  # octet final variable sur l'appareil réel
         if command == p.SET_VIEW:
             self.view = payload[1]
             if self.view == p.VIEW_LIGHT and len(payload) >= 6:
                 self.color, self.brightness = bytes(payload[2:5]), payload[5]
-            return [self._reply(p.LIGHT_STATUS, b"\x64"),  # message spontané, comme l'appareil réel
-                    self._reply(p.SET_VIEW, bytes([self.view]))]
+            elif self.view == p.VIEW_LIGHT and self.model == "pixoo":
+                self.brightness = 0  # « 45 01 » seul : lumière éteinte
+            light = self._reply(p.LIGHT_STATUS, bytes([self.brightness]))  # message spontané
+            if self.model == "pixoo":  # pas d'accusé 45
+                return [light] if self.view == p.VIEW_LIGHT else []
+            return [light, self._reply(p.SET_VIEW, bytes([self.view]))]
         return []

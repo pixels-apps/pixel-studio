@@ -42,34 +42,41 @@ class TimeboxClient:
     def state(self) -> protocol.DeviceState:
         return protocol.parse_state(self.exchange(protocol.get_view()).data)
 
-    def set_color(self, color: bytes, brightness: int = 100) -> None:
-        self.exchange(protocol.set_light(color, brightness))
+    def set_color(self, color: bytes, brightness: int = 100) -> protocol.DeviceState:
+        return self._apply(protocol.set_light(color, brightness))
 
-    def set_brightness(self, level: int) -> None:
-        self.exchange(protocol.set_brightness(level))
+    def set_brightness(self, level: int) -> protocol.DeviceState:
+        return self._apply(protocol.set_brightness(level))
 
-    def set_view(self, view: int) -> None:
-        self.exchange(protocol.set_view(view))
+    def set_view(self, view: int) -> protocol.DeviceState:
+        if view == protocol.VIEW_LIGHT:
+            # « 45 01 » seul : l'Evo reprend sa dernière couleur, mais le Pixoo éteint la lumière
+            # (luminosité 0). On renvoie donc la couleur et la luminosité actuelles.
+            current = self.state()
+            brightness = current.brightness if 0 < current.brightness <= 100 else 100
+            return self.set_color(bytes.fromhex(current.light_color), brightness)
+        return self._apply(protocol.set_view(view))
 
     def send_image(self, pixels: list[bytes]) -> None:
-        """Affiche une image 16×16 (256 couleurs RGB, ligne par ligne).
-
-        Le Timebox Evo acquitte l'image (``04 44 55``), le Pixoo non : dans les deux cas, on confirme
-        par une lecture de l'état (46), à laquelle l'appareil répond une fois l'image traitée.
-        """
-        self.exchange(protocol.get_view(), before=protocol.set_image(pixels))
+        """Affiche une image 16×16 (256 couleurs RGB, ligne par ligne)."""
+        self._apply(protocol.set_image(pixels))
         self.last_image = [p.hex() for p in pixels]
         self.storage.save_last_image(self.last_image)
 
     # --- Échange de trames ----------------------------------------------------------
 
+    def _apply(self, payload: bytes) -> protocol.DeviceState:
+        """Envoie une commande puis lit l'état : la réponse à 46, que l'appareil donne une fois la
+        commande traitée, la confirme (les accusés varient : le Pixoo n'acquitte ni 44 ni 45)."""
+        return protocol.parse_state(self.exchange(protocol.get_view(), before=payload).data)
+
     def exchange(self, payload: bytes, before: bytes | None = None) -> protocol.Response:
-        """Envoie une commande et attend la réponse qui la confirme.
+        """Envoie une commande et attend la réponse de même code.
 
         ``before`` : commande envoyée juste avant, sans attendre de réponse (``payload`` sert alors
         de confirmation).
         """
-        expected = protocol.EXPECTED_REPLY.get(payload[0], payload[0])
+        expected = payload[0]
         self.lock.lock()
         try:
             return self._exchange(payload, expected, before)
