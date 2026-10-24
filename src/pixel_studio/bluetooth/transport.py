@@ -1,7 +1,8 @@
 """Transports vers l'appareil.
 
 `Transport` est l'interface ; `TcpTransport` parle au relais timebox-bridge (macOS, Linux…).
-D'autres implémentations peuvent la remplacer (RFCOMM direct sous Linux, faux appareil en test).
+`TransportFactory` (bean) crée le transport de chaque appareil : les tests la remplacent pour
+brancher un faux appareil. D'autres implémentations sont possibles (RFCOMM direct sous Linux).
 
 Dans Pyronaut, le module Python `socket` est exclu de GraalPy : le transport TCP utilise
 `java.net.Socket`. Ces objets Java sont aussi partageables entre les contextes GraalPy du pool.
@@ -11,7 +12,6 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass
 
 import java
-from jakarta.annotation import PreDestroy
 from jakarta.inject import Singleton
 from micronaut.context.annotation import ConfigurationProperties
 
@@ -34,26 +34,28 @@ class Transport(ABC):
 
 
 # Pas de frozen=True : avec des valeurs par défaut, Micronaut affecte les champs après construction.
-@ConfigurationProperties("timebox.bridge")
+@ConfigurationProperties("pixel-studio.bridge")
 @dataclass
 class BridgeConfig:
+    """Relais par défaut (appareil Bluetooth créé au premier lancement) et délais."""
     host: str = "127.0.0.1"
     port: int = 7777
     connect_timeout_ms: int = 2000
+    reply_timeout_ms: int = 2000
 
 
-@Singleton
 class TcpTransport(Transport):
-    def __init__(self, config: BridgeConfig):
-        self.config = config
+    def __init__(self, host: str, port: int, connect_timeout_ms: int):
+        self.host = host
+        self.port = port
+        self.connect_timeout_ms = connect_timeout_ms
         self.socket = None
 
     def _connect(self):
         if self.socket is None or self.socket.isClosed():
             sock = Socket()
             sock.setTcpNoDelay(True)
-            sock.connect(InetSocketAddress(self.config.host, self.config.port),
-                         self.config.connect_timeout_ms)
+            sock.connect(InetSocketAddress(self.host, self.port), self.connect_timeout_ms)
             self.socket = sock
         return self.socket
 
@@ -68,7 +70,6 @@ class TcpTransport(Transport):
         count = stream_in.available()
         return bytes(stream_in.read() & 0xFF for _ in range(count)) if count > 0 else b""
 
-    @PreDestroy
     def close(self) -> None:
         if self.socket is not None:
             try:
@@ -77,4 +78,13 @@ class TcpTransport(Transport):
                 self.socket = None
 
     def __str__(self) -> str:
-        return f"relais {self.config.host}:{self.config.port}"
+        return f"relais {self.host}:{self.port}"
+
+
+@Singleton
+class TransportFactory:
+    def __init__(self, config: BridgeConfig):
+        self.config = config
+
+    def create(self, host: str, port: int) -> Transport:
+        return TcpTransport(host, port, self.config.connect_timeout_ms)

@@ -1,5 +1,5 @@
 applicationType: default
-defaultPackage: timebox.evo
+defaultPackage: pixel_studio
 testFramework: pytest
 sourceLanguage: python
 buildTool: pyronaut

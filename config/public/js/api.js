@@ -6,7 +6,7 @@ export class ApiError extends Error {
     this.status = status;
   }
 
-  /** Relais injoignable ou appareil muet (503), ou serveur hors service (0). */
+  /** Appareil (ou relais) injoignable ou muet (503), ou serveur hors service (0). */
   get unavailable() {
     return this.status === 503 || this.status === 0;
   }
@@ -36,16 +36,25 @@ async function request(method, path, { json, body, headers } = {}) {
 }
 
 export const api = {
-  state: () => request("GET", "/timebox/state"),
-  color: (rgb, brightness) => request("POST", `/timebox/color/${rgb}?brightness=${brightness}`),
-  brightness: (level) => request("POST", `/timebox/brightness/${level}`),
-  view: (name) => request("POST", `/timebox/view/${name}`),
-  sendImage: (pixels) => request("POST", "/timebox/image", { json: { pixels } }),
-  gallery: () => request("GET", "/timebox/gallery"),
-  galleryCreate: (name, pixels) => request("POST", "/timebox/gallery", { json: { name, pixels } }),
-  galleryUpdate: (id, changes) => request("PUT", `/timebox/gallery/${id}`, { json: changes }),
-  galleryDelete: (id) => request("DELETE", `/timebox/gallery/${id}`),
-  gallerySend: (id) => request("POST", `/timebox/gallery/${id}/send`),
+  devices: () => request("GET", "/devices"),
+  activate: (id) => request("PUT", "/devices/active", { json: { id } }),
+  addDevice: (device) => request("POST", "/devices", { json: device }),
+  testDevice: (device) => request("POST", "/devices/test", { json: device }),
+  removeDevice: (id) => request("DELETE", `/devices/${id}`),
+  state: () => request("GET", "/device/state"),
+  color: (rgb, brightness) => request("POST", `/device/color/${rgb}?brightness=${brightness}`),
+  clockColor: (rgb) => request("POST", `/device/clock/color/${rgb}`),
+  brightness: (level) => request("POST", `/device/brightness/${level}`),
+  view: (name) => request("POST", `/device/view/${name}`),
+  channel: (name) => request("POST", `/device/channel/${name}`),
+  screen: (power) => request("POST", `/device/screen/${power}`),
+  sendImage: (pixels) => request("POST", "/device/image", { json: { pixels } }),
   lastImage: () =>
-    request("GET", "/timebox/image").catch((e) => (e.status === 404 ? null : Promise.reject(e))),
+    request("GET", "/device/image").catch((e) => (e.status === 404 ? null : Promise.reject(e))),
+  gallery: () => request("GET", "/gallery"),
+  galleryCreate: (name, pixels) => request("POST", "/gallery", { json: { name, pixels } }),
+  galleryUpdate: (id, changes) => request("PUT", `/gallery/${id}`, { json: changes }),
+  galleryDelete: (id) => request("DELETE", `/gallery/${id}`),
+  gallerySend: (id) => request("POST", `/gallery/${id}/send`),
+  galleryConvert: (id, size) => request("POST", `/gallery/${id}/convert?size=${size}`),
 };

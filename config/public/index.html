@@ -3,17 +3,26 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Timebox Evo</title>
+  <title>pixel-studio</title>
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 4 4'%3E%3Crect width='4' height='4' fill='%23111'/%3E%3Ccircle cx='1' cy='1' r='.4' fill='%23f43'/%3E%3Ccircle cx='3' cy='1' r='.4' fill='%23fc3'/%3E%3Ccircle cx='1' cy='3' r='.4' fill='%233c6'/%3E%3Ccircle cx='3' cy='3' r='.4' fill='%2339f'/%3E%3C/svg%3E">
   <link rel="stylesheet" href="style.css">
   <script type="module" src="js/app.js"></script>
 </head>
 <body>
   <header class="topbar">
-    <h1 class="brand"><span class="brand-dot" aria-hidden="true"></span>Timebox Evo</h1>
-    <div class="connection" id="connection" role="status" aria-live="polite">
-      <span class="connection-dot" aria-hidden="true"></span>
-      <span id="connection-label">Connexion…</span>
+    <h1 class="brand"><span class="brand-dot" aria-hidden="true"></span>pixel-studio</h1>
+    <div class="topbar-right">
+      <label class="device-picker">
+        <span class="visually-hidden">Appareil</span>
+        <select id="device" title="Appareil piloté"></select>
+      </label>
+      <button class="icon-button" id="manage-devices" type="button" title="Gérer les appareils" aria-label="Gérer les appareils">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h10 M18 7h2 M4 17h2 M10 17h10 M14 4v6 M10 14v6"/></svg>
+      </button>
+      <div class="connection" id="connection" role="status" aria-live="polite">
+        <span class="connection-dot" aria-hidden="true"></span>
+        <span id="connection-label">Connexion…</span>
+      </div>
     </div>
   </header>
 
@@ -26,6 +35,7 @@
           <input class="doc-name" id="doc-name" type="text" maxlength="60" placeholder="Sans titre"
                  aria-label="Nom de l'image" autocomplete="off" spellcheck="false">
           <div class="badges">
+            <span class="badge neutral" id="size-badge" title="Taille de l'image">16×16</span>
             <span class="badge neutral" id="saved-state" hidden></span>
             <span class="badge" id="dirty" hidden>modifié depuis l'envoi</span>
           </div>
@@ -39,9 +49,6 @@
             <button type="button" class="tool" data-tool="pick" title="Pipette (I, ou Alt + clic)" aria-label="Pipette"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M13 7l4 4 M18.5 3.5a2.1 2.1 0 0 1 3 3L17 11l-4-4z M14 8l-9 9v3h3l9-9"/></svg></button>
           </div>
           <div class="tool-group">
-            <button type="button" class="tool" id="import" title="Importer une image (ou glisser-déposer, ou ⌘V)" aria-label="Importer une image"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15V4 M7.5 8.5L12 4l4.5 4.5 M5 14v4a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-4"/></svg></button>
-          </div>
-          <div class="tool-group">
             <button type="button" class="tool" id="undo" title="Annuler (⌘Z / Ctrl+Z)" aria-label="Annuler"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 14L4 9l5-5 M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/></svg></button>
             <button type="button" class="tool" id="redo" title="Rétablir (⇧⌘Z / Ctrl+Y)" aria-label="Rétablir"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 14l5-5-5-5 M20 9H9.5a5.5 5.5 0 0 0 0 11H13"/></svg></button>
             <button type="button" class="tool" id="clear" title="Tout effacer" aria-label="Tout effacer"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16 M10 11v6 M14 11v6 M6 7l1 13h10l1-13 M9 7V4h6v3"/></svg></button>
@@ -50,7 +57,7 @@
 
         <div class="editor-body">
           <canvas id="editor" class="pixel-canvas" width="512" height="512"
-                  aria-label="Grille de dessin 16 par 16 : flèches pour se déplacer, Espace pour appliquer l'outil"
+                  aria-label="Grille de dessin : flèches pour se déplacer, Espace pour appliquer l'outil"
                   aria-describedby="cursor-status"></canvas>
           <p class="visually-hidden" id="cursor-status" aria-live="polite"></p>
 
@@ -81,7 +88,7 @@
         </div>
 
         <div class="send-row">
-          <button class="primary" type="button" id="send">Envoyer au Timebox</button>
+          <button class="primary" type="button" id="send">Envoyer</button>
           <button class="secondary" type="button" id="save">Enregistrer</button>
           <button class="secondary" type="button" id="save-copy" hidden>Enregistrer une copie</button>
           <label class="check"><input type="checkbox" id="auto-send"> Envoi automatique</label>
@@ -92,10 +99,13 @@
       <div class="card">
         <div class="card-head">
           <h2 id="gallery-title">Galerie <span class="muted" id="gallery-count"></span></h2>
-          <button class="secondary small-button" type="button" id="new-image">Nouvelle image</button>
+          <div class="head-actions">
+            <button class="secondary small-button" type="button" id="import" title="Importer une image (ou glisser-déposer sur l'éditeur, ou ⌘V)">Importer…</button>
+            <button class="secondary small-button" type="button" id="new-image">Nouvelle image</button>
+          </div>
         </div>
         <ul class="gallery" id="gallery" aria-labelledby="gallery-title"></ul>
-        <p class="muted small" id="gallery-empty" hidden>Aucune image enregistrée : dessinez ou importez une image, puis « Enregistrer ».</p>
+        <p class="muted small" id="gallery-empty" hidden>Aucune image enregistrée : importez une image (elle s’enregistre aussitôt), ou dessinez puis « Enregistrer ».</p>
       </div>
     </section>
 
@@ -108,7 +118,8 @@
           <span class="tile-date muted"></span>
         </div>
         <div class="tile-actions">
-          <button type="button" class="tile-button" data-action="send" title="Afficher sur le Timebox" aria-label="Afficher sur le Timebox"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h12 M13 6l6 6-6 6"/></svg></button>
+          <button type="button" class="tile-button" data-action="send" title="Afficher sur l'appareil" aria-label="Afficher sur l'appareil"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h12 M13 6l6 6-6 6"/></svg></button>
+          <button type="button" class="tile-button" data-action="convert" title="Convertir" aria-label="Convertir"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9V4h5 M20 15v5h-5 M4 4l6 6 M20 20l-6-6 M14 4h6v6 M10 20H4v-6"/></svg></button>
           <button type="button" class="tile-button" data-action="rename" title="Renommer" aria-label="Renommer"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20l4-1 11-11-3-3L5 16z"/></svg></button>
           <button type="button" class="tile-button danger" data-action="delete" title="Supprimer" aria-label="Supprimer"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16 M10 11v6 M14 11v6 M6 7l1 13h10l1-13 M9 7V4h6v3"/></svg></button>
         </div>
@@ -124,19 +135,35 @@
           </button>
         </div>
         <dl class="state">
-          <div><dt>Écran</dt><dd id="state-view">—</dd></div>
-          <div><dt>Couleur</dt><dd><span class="swatch" id="state-swatch"></span><span id="state-color">—</span></dd></div>
+          <div><dt id="state-view-label">Écran</dt><dd id="state-view">—</dd></div>
+          <div data-capability="screen"><dt>Affichage</dt><dd id="state-power">—</dd></div>
+          <div data-capability="color"><dt id="state-color-label">Couleur</dt><dd><span class="swatch" id="state-swatch"></span><span id="state-color">—</span></dd></div>
           <div><dt>Luminosité</dt><dd id="state-brightness">—</dd></div>
         </dl>
         <p class="muted small" id="state-updated"></p>
       </div>
 
-      <div class="card">
+      <div class="card" data-capability="views">
         <h2>Écran affiché</h2>
         <div class="segmented" role="group" aria-label="Écran affiché">
           <button type="button" data-view="clock">Horloge</button>
           <button type="button" data-view="light">Lumière</button>
         </div>
+      </div>
+
+      <div class="card" data-capability="channels">
+        <h2>Canal</h2>
+        <div class="segmented" role="group" aria-label="Canal affiché">
+          <button type="button" data-channel="faces">Cadrans</button>
+          <button type="button" data-channel="cloud">Cloud</button>
+          <button type="button" data-channel="visualizer">Visualiseur</button>
+          <button type="button" data-channel="custom">Personnalisé</button>
+        </div>
+      </div>
+
+      <div class="card" data-capability="screen">
+        <h2>Écran</h2>
+        <button class="secondary wide" type="button" id="screen-toggle">Mettre en veille</button>
       </div>
 
       <div class="card">
@@ -147,8 +174,8 @@
         </div>
       </div>
 
-      <div class="card">
-        <h2><label for="color">Couleur unie</label></h2>
+      <div class="card" data-capability="color">
+        <h2><label for="color" id="color-title">Couleur unie</label></h2>
         <div class="color-row">
           <input type="color" id="color" value="#ff8800">
           <div class="presets" id="presets" role="group" aria-label="Couleurs rapides"></div>
@@ -159,7 +186,7 @@
   </main>
 
   <footer class="footer">
-    <span>pixel-studio · Pyronaut (GraalPy + Micronaut) · relais timebox-bridge</span>
+    <span>pixel-studio · Pyronaut (GraalPy + Micronaut)</span>
     <a href="/swagger-ui/index.html" target="_blank" rel="noopener">Documentation de l'API</a>
   </footer>
 
@@ -182,9 +209,9 @@
         <figure>
           <div class="screen-frame small">
             <canvas id="import-preview" class="led-screen" width="200" height="200"
-                    role="img" aria-label="Résultat 16 par 16"></canvas>
+                    role="img" aria-label="Résultat"></canvas>
           </div>
-          <figcaption class="muted small-label">Résultat 16×16</figcaption>
+          <figcaption class="muted small-label" id="import-size">Résultat 16×16</figcaption>
         </figure>
       </div>
 
@@ -207,6 +234,40 @@
       <div class="dialog-actions">
         <button class="secondary" value="cancel">Annuler</button>
         <button class="primary" value="import" id="import-confirm">Importer dans l'éditeur</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog class="dialog" id="devices-dialog" aria-labelledby="devices-title">
+    <form method="dialog" id="device-form">
+      <div class="card-head">
+        <h2 id="devices-title">Appareils</h2>
+        <button class="icon-button" value="cancel" formnovalidate aria-label="Fermer" title="Fermer">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12 M18 6L6 18"/></svg>
+        </button>
+      </div>
+
+      <ul class="device-list" id="device-list"></ul>
+
+      <h3>Ajouter un appareil</h3>
+      <fieldset class="option">
+        <legend>Connexion</legend>
+        <div class="segmented">
+          <label><input type="radio" name="kind" value="wifi" checked> Wi-Fi (Pixoo-64)</label>
+          <label><input type="radio" name="kind" value="bluetooth"> Bluetooth (relais)</label>
+        </div>
+      </fieldset>
+      <div class="form-grid">
+        <label>Nom <input type="text" name="name" maxlength="40" required placeholder="Pixoo-64 du salon" autocomplete="off"></label>
+        <label>Adresse <input type="text" name="host" required placeholder="192.168.1.50" autocomplete="off" spellcheck="false"></label>
+        <label>Port <input type="number" name="port" min="1" max="65535" placeholder="9000"></label>
+      </div>
+      <p class="muted small" id="device-hint">Wi-Fi : adresse IP de l'appareil (visible dans l'application Divoom ou sur la box) ; port 9000 pour le Pixoo-64 II, 80 pour le Pixoo-64 d'origine.</p>
+      <p class="small" id="device-test-result" role="status" aria-live="polite"></p>
+
+      <div class="dialog-actions">
+        <button class="secondary" type="button" id="device-test">Tester</button>
+        <button class="primary" type="button" id="device-add">Ajouter</button>
       </div>
     </form>
   </dialog>

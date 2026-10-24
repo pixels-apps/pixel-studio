@@ -1,7 +1,12 @@
 # Architecture
 
 ```
-browser ──HTTP──> pixel-studio (Pyronaut, :8080) ──TCP──> timebox-bridge (:7777) ──RFCOMM ch. 1──> Timebox Evo
+                                         ┌─TCP──> timebox-bridge (:7777) ──RFCOMM──> Timebox Evo / Pixoo (16×16)
+browser ──HTTP──> pixel-studio (:8080) ──┤
+                                         └─HTTP/1.1 (Wi-Fi) ──────────────────────> Pixoo-64 II (64×64)
+
+Wi-Fi devices need no relay: the JVM reaches them directly with `java.net.http` (see
+[pixoo64.md](pixoo64.md)). The rest of this page is about the Bluetooth relay.
 ```
 
 ## Why a relay
@@ -35,14 +40,25 @@ Bluetooth SPP) could also act as a Wi-Fi relay.
 
 ## Application
 
-- `protocol.py` — pure Python: frame encoding/decoding, commands, image encoding.
-- `transport.py` — `Transport` interface; `TcpTransport` talks to the relay. Tests replace it with a
-  fake device (`@Replaces(TcpTransport)`, `@Requires(env="test")`).
-- `client.py` — `TimeboxClient` (`@Singleton`): sends a command and waits for the reply that
-  confirms it, serialized by a lock; remembers and persists the last image sent (the device cannot
-  report it).
-- `storage.py` — gallery (one JSON file per image) and last image, atomic writes.
-- `controller.py` — REST API under `/timebox`, error mapping (400 / 404 / 503).
+- `device.py` — the `Device` interface shared by all device families: state, brightness, image,
+  optional capabilities (`color`, `views`). The web UI only shows what the active device supports.
+- `registry.py` — `DeviceRegistry` (`@Singleton`): declared devices (`devices.json`), active device,
+  last image sent to each (devices cannot report it).
+- `bluetooth/protocol.py` — pure Python: frame encoding/decoding, commands, image encoding.
+- `bluetooth/transport.py` — `Transport` interface; `TcpTransport` talks to the relay;
+  `TransportFactory` (bean) creates one per device. Tests replace the factory with a fake device
+  (`@Replaces(TransportFactory)`, `@Requires(env="test")`; the fake must subclass the factory).
+- `bluetooth/device.py` — `BluetoothDevice`: sends a command, then confirms it by reading the state
+  (`46`), serialized by a lock.
+- `storage.py` — devices, gallery (one JSON file per image) and last images, atomic writes.
+- `wifi/transport.py` — `HttpTransport`; `JavaHttpTransport` (`java.net.http.HttpClient`, forced to
+  HTTP/1.1; the Python `socket` module is not available); `HttpTransportFactory` (bean, replaced
+  by a fake Pixoo-64 in tests).
+- `wifi/device.py` — `WifiDevice`: state from three reads, brightness, screen, channel; images sent
+  one at a time, only the latest when several wait.
+- `pixels.py` — 16×16 / 64×64 images, size conversion (nearest neighbour up, most frequent color
+  per block down).
+- `api.py` — REST API (`/devices`, `/device/*`, `/gallery/*`), error mapping (400 / 404 / 409 / 503).
 - `config/public/` — the web UI, plain ES modules served as static resources.
 
 ## GraalPy constraints

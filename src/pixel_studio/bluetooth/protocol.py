@@ -1,4 +1,4 @@
-"""Protocole série du Divoom Timebox Evo (Python pur, sans dépendance Micronaut).
+"""Protocole série des appareils Divoom en Bluetooth : Timebox Evo, Pixoo 16×16 (Python pur).
 
 Trame : ``01 | LLLL | payload | CRCR | 02``
 
@@ -29,7 +29,7 @@ VIEW_LIGHT = 0x01
 IMAGE = 0x44
 
 # Les accusés varient selon l'appareil (le Pixoo n'acquitte ni 44 ni 45) : chaque commande est
-# confirmée par la lecture de l'état (46) qui la suit (client.TimeboxClient._apply).
+# confirmée par la lecture de l'état (46) qui la suit (bluetooth.device.BluetoothDevice._apply).
 
 
 def checksum(body: bytes) -> int:
@@ -104,17 +104,6 @@ def _level(value: int) -> int:
     return value
 
 
-def parse_color(rgb: str) -> bytes:
-    """« ff8800 » ou « #FF8800 » → 3 octets."""
-    value = rgb.removeprefix("#")
-    try:
-        if len(value) != 6:
-            raise ValueError
-        return bytes.fromhex(value)
-    except ValueError:
-        raise ValueError(f"couleur invalide (attendu RRGGBB) : {rgb}") from None
-
-
 def get_view() -> bytes:
     return bytes([GET_VIEW])
 
@@ -125,6 +114,15 @@ def set_view(view: int) -> bytes:
 
 def set_brightness(level: int) -> bytes:
     return bytes([SET_BRIGHTNESS, _level(level)])
+
+
+def set_clock(color: bytes, style: int = 0, time: bool = True, weather: bool = False,
+              temperature: bool = False, calendar: bool = False) -> bytes:
+    """Écran « horloge » complet : ``45 00 01 TT XX WW EE CC RRGGBB`` (style, heure, météo,
+    température, calendrier, couleur) ; « 45 00 » seul reprend les réglages en place."""
+    if len(color) != 3:
+        raise ValueError("la couleur doit faire 3 octets")
+    return bytes([SET_VIEW, VIEW_CLOCK, 1, style, time, weather, temperature, calendar]) + color
 
 
 def set_light(color: bytes, brightness: int = 100, effect: int = 0, power: bool = True) -> bytes:
@@ -200,14 +198,18 @@ def set_image(pixels: list[bytes]) -> bytes:
     return IMAGE_HEADER + encode_frame(pixels)
 
 
-def parse_pixels(colors: list[str]) -> list[bytes]:
-    """256 couleurs « rrggbb » (ou « #rrggbb ») → 256 × 3 octets."""
-    if len(colors) != PIXELS:
-        raise ValueError(f"une image fait {PIXELS} pixels, pas {len(colors)}")
-    return [parse_color(c) for c in colors]
-
-
 # --- Décodage de l'état (réponse à GET_VIEW) -----------------------------------------
+
+@dataclass(frozen=True)
+class Clock:
+    """Réglages de l'écran horloge (octets 12 à 19 de la réponse 46)."""
+    color: str
+    style: int
+    time: bool
+    weather: bool
+    temperature: bool
+    calendar: bool
+
 
 @dataclass(frozen=True)
 class DeviceState:
@@ -216,16 +218,22 @@ class DeviceState:
     brightness: int
     power: bool
     raw: str
+    clock: Clock | None = None
 
 
 def parse_state(data: bytes) -> DeviceState:
     """Décode les données d'une réponse 46 (interprétation partielle, cf. docs/protocol.md)."""
     if len(data) < 9:
         raise ValueError(f"état trop court ({len(data)} octets)")
+    clock = None
+    if len(data) >= 20:
+        clock = Clock(color=data[12:15].hex(), style=data[15], time=data[16] == 1, weather=data[17] == 1,
+                      temperature=data[18] == 1, calendar=data[19] == 1)
     return DeviceState(
         view=data[0],
         light_color=data[3:6].hex(),
         brightness=data[6],
         power=data[8] == 1,
         raw=data.hex(" "),
+        clock=clock,
     )
